@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>拾穗 Gleaner 扫描器 fixture</title>
+  <style>
+    .bg { width: 300px; height: 300px; background-image: url('bg600.svg'); }
+  </style>
+</head>
+<body>
+  <h1>扫描器测试夹具 — 每个采集路径一个样本</h1>
+
+  <!-- 1. 普通 img，应采集，尺寸 300x300 -->
+  <img id="plain" src="a300.svg" alt="plain">
+
+  <!-- 2. 小图，应被 minSize=200 过滤 -->
+  <img id="tiny" src="tiny50.svg" alt="tiny">
+
+  <!-- 3. srcset：一张图只出一张卡片，下载 2x 的 big800。1x 屏上 2x 没加载过，尺寸未知（0，不冒充 300×300）；
+       2x 屏上浏览器加载的就是 big800，报 800×800 -->
+  <img id="srcset" src="a300.svg" srcset="a300.svg 1x, big800.svg 2x" alt="srcset">
+
+  <!-- 4. 懒加载：src 是 data URI（应跳过），真图在 data-src -->
+  <img id="lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="lazy400.svg" alt="lazy">
+
+  <!-- 5. CSS 背景图，应采集 bg600；尺寸未知（0），不报 300×300 的盒子尺寸 -->
+  <div class="bg"></div>
+
+  <!-- 6. 指向图片文件的链接，应采集 linked.svg（尺寸未知=保留） -->
+  <a href="linked.svg">查看原图</a>
+  <!-- 6b. 指向网页的链接，不应采集 -->
+  <a href="https://example.com/page.html">普通链接</a>
+
+  <!-- 7. 同一张图出现两次，应去重为一条 -->
+  <img id="dup1" src="dup.svg" alt="dup">
+  <img id="dup2" src="dup.svg" alt="dup">
+
+  <!-- 8. 可升级 URL：query 带 imageView2，规则应剥掉参数；
+       且升级后与 8b 的裸 URL 相同，两条应合并成一条 -->
+  <img id="upg" src="a300.svg?imageView2/2/w/100" alt="upgradable">
+
+  <!-- 9. blob: 协议应跳过（构造一个假的） -->
+  <img id="blob" src="blob:http://localhost/fake" alt="blob">
+  <script src="scan-harness.js"></script>
+  <script src="zip-harness.js"></script>
+</body>
+</html>

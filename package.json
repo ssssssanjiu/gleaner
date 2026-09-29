@@ -1,0 +1,49 @@
+{
+  "name": "gleaner",
+  "version": "0.2.0",
+  "description": "拾穗 Gleaner：开源浏览器扩展，一键拾取网页里的原图、视频和音频（B站 音画自动合并、原图自动升级、真暂停/断点续传）",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "tsc --noEmit",
+    "postinstall": "node scripts/prepare-public.mjs && wxt prepare",
+    "test": "tsx --test tests/*.test.ts",
+    "selftest": "node scripts/build-selftest.mjs",
+    "e2e": "OG_OUT_DIR=.output-e2e wxt build && node e2e/run.mjs",
+    "mux-check": "node e2e/mux-check.mjs",
+    "popup-check": "node e2e/popup-check.mjs",
+    "sw-check": "node e2e/sw-check.mjs",
+    "live-bili": "OG_OUT_DIR=.output-e2e wxt build && node e2e/bili-live.mjs",
+    "docs:shots": "OG_OUT_DIR=.output-e2e wxt build && node scripts/docs-shots.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@ffmpeg/core": "^0.12.10",
+    "jszip": "^3.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@wxt-dev/module-react": "^1.1.2",
+    "esbuild": "^0.25.12",
+    "puppeteer-core": "^25.9.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3",
+    "wxt": "^0.19.13"
+  },
+  "overrides": {
+    "@vitejs/plugin-react": "$@vitejs/plugin-react"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

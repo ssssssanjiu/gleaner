@@ -1,0 +1,29 @@
+# 白名单：只提交下面明确列出的东西。
+# 项目目录里会混进本地下载的素材（扩展把下载目录设到这里时）、构建产物、
+# 测试浏览器的 profile（含浏览记录）—— 默认全部排除，比逐个列黑名单安全。
+/*
+!/.gitignore
+!/.github/
+!/src/
+!/tests/
+!/e2e/
+!/scripts/
+!/selftest/
+!/docs/
+!/README.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/THIRD_PARTY_NOTICES.md
+!/licenses/
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/wxt.config.ts
+
+# 白名单目录里也不要的
+.DS_Store
+# 装依赖时由 scripts/prepare-public.mjs 生成：ffmpeg.wasm（从 @ffmpeg/core 复制）和打进扩展包的许可证
+/src/public/ffmpeg/
+/src/public/licenses/
+# 由 npm run selftest 生成（scripts/build-selftest.mjs）
+/selftest/fixture/*-harness.js

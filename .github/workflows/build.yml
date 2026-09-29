@@ -1,0 +1,43 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # postinstall 会从 @ffmpeg/core 复制 ffmpeg.wasm，并生成打进扩展包的许可证文件
+      - run: npm ci
+      - run: npm run compile
+      - run: npm test
+      # 在干净的 CI 环境里打包：安装包里只会有构建产物，不会混进本地工作区的任何文件
+      - run: npm run zip
+      - run: npm run zip:firefox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gleaner-packages
+          path: .output/*.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gleaner-packages
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: '*.zip'
+          generate_release_notes: true

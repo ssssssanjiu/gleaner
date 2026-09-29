@@ -1,0 +1,666 @@
+:root {
+  --bg: #ffffff;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+  --danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --fg: #e9eaee;
+    --muted: #9aa1ac;
+    --line: #2c3038;
+    --accent: #60a5fa;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * Chrome 弹窗按内容定尺寸，最高 800×600。整页高度必须一路锁死到 .app：
+ * 以前只给 body 设了 600px，#root 没有高度，.app 的 height:100% 落空，
+ * 图片一多整页被撑到上千像素，下载按钮和暂停/取消被裁到 600px 以外、滚也滚不到（popup-ux#1）。
+ * 现在整页永不滚动，长列表只在各自的区域里滚。
+ */
+html,
+body,
+#root {
+  height: 600px;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  width: 740px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 14px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+header {
+  flex-shrink: 0;
+}
+
+/* 助手 + 扫描选项：内容再多（AI 设置展开、长报错）也最多占一小半，超出在自己里面滚 */
+.top {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 46%;
+  overflow-y: auto;
+}
+
+/* 媒体 + 图片网格：占满剩余空间，图片再多也只在这里滚 */
+.main {
+  flex: 1 1 0;
+  min-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 底部固定区：下载按钮、进度 + 暂停/继续/取消、正在下载列表、下载记录，永远看得见 */
+.dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.empty {
+  padding: 28px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+.brand-en {
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.badge {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.sub {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+section.opts,
+section.toolbar,
+footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 6px 0 0;
+}
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+input[type='number'] {
+  width: 58px;
+}
+
+input[type='number'],
+input.search {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+
+input.search {
+  flex: 1;
+  min-width: 160px;
+}
+
+button {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  margin-left: auto;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+
+.notice {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  color: var(--muted);
+}
+
+.error {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  max-height: 84px;
+  overflow-y: auto;
+}
+
+.notice button.link {
+  margin-left: 6px;
+}
+
+/* 过滤/全选这一条在图片区滚动时贴在顶上 */
+.main section.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+  align-content: start;
+  padding: 2px 2px 8px;
+}
+
+.cell {
+  position: relative;
+  padding: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+
+.cell.on {
+  border-color: var(--accent);
+}
+
+.cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cell .meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  font-size: 10px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.meta .tag {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 9px;
+}
+
+.progress {
+  position: relative;
+  margin-top: 6px;
+  padding: 5px 8px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+}
+
+.p-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+}
+
+.progress.done .p-label {
+  color: #16a34a;
+}
+
+.p-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress .bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  transition: width 0.2s ease;
+}
+
+.progress span {
+  position: relative;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+section.opts,
+section.toolbar,
+footer {
+  flex-shrink: 0;
+}
+
+.job-controls {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.job-controls button {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.job-list {
+  flex-shrink: 0;
+  max-height: 80px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.j-status {
+  flex-shrink: 0;
+  width: 44px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.job-item.done .j-status { color: #16a34a; }
+.job-item.active .j-status { color: var(--accent); }
+.job-item.failed .j-status { color: var(--danger); }
+
+.j-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.media {
+  max-height: 136px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 8px 4px;
+}
+
+/* 媒体多了在这一栏里滚，标题行贴顶 */
+.media .media-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: 4px;
+  background: var(--bg);
+}
+
+.media-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.m-kind {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent);
+}
+
+.m-kind.audio { background: #16a34a; }
+.m-kind.stream { background: var(--muted); }
+.m-kind.video { background: var(--accent); }
+
+.history {
+  flex-shrink: 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+
+/* 记录多了在这里面滚，标题行（打开下载位置 / 清空）不动 */
+.history-list {
+  max-height: 104px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 任务进行中时让出高度给正在下载列表 */
+.history.compact .history-list {
+  max-height: 46px;
+}
+
+.flash {
+  margin: 0 0 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flash.warn {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  padding-bottom: 2px;
+}
+
+.history-head span {
+  font-weight: 600;
+}
+
+.history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.h-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-row .h-meta {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 「定位文件」永远横排、不被挤 */
+.history-row .h-reveal {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.h-meta {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+button.link {
+  border: none;
+  padding: 2px 4px;
+  color: var(--accent);
+  background: none;
+  font-size: 12px;
+}
+
+.history-head button.link:last-child {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.media-warn {
+  color: var(--danger);
+}
+
+.j-error {
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--danger);
+  font-size: 11px;
+}
+
+/* 记录里的失败原因单独占一行，最多两行，悬停看全文（popup-ux#12） */
+.history-row .h-error {
+  flex: 1 0 100%;
+  max-width: 100%;
+  margin-left: 0;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+
+/* ---------------- AI 助手 ---------------- */
+
+.agent {
+  flex-shrink: 0;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-row input.search {
+  min-width: 0;
+}
+
+.agent-row button.mic {
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.agent-row button.mic.listening {
+  border-color: var(--danger);
+  color: var(--danger);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.45; }
+}
+
+.agent-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.chip.cloud { border-color: var(--accent); color: var(--accent); }
+.chip.local { border-color: #16a34a; color: #16a34a; }
+
+.agent-explain {
+  flex: 1;
+  min-width: 200px;
+}
+
+.agent-explain.warn { color: var(--danger); }
+
+.agent-settings {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.agent-settings input[type='password'],
+.agent-settings input[type='text'],
+.agent-settings select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+
+.agent-settings .full {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.media-row.on {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 4px;
+}
+
+.media-row input[type='checkbox'] {
+  margin: 0;
+}

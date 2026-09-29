@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>拾穗 Gleaner · 麦克风授权</title>
+    <style>
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+        color: #16181d;
+        background: #fff;
+      }
+      main { max-width: 460px; padding: 32px; }
+      h1 { font-size: 20px; margin: 0 0 12px; }
+      p { color: #6b7280; margin: 0 0 10px; }
+      #status { color: #16181d; font-weight: 600; }
+      #status.ok { color: #16a34a; }
+      #status.err { color: #dc2626; }
+      button {
+        margin-top: 8px;
+        padding: 8px 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #16181d; color: #e9eaee; }
+        #status { color: #e9eaee; }
+        p { color: #9aa1ac; }
+        button { border-color: #2c3038; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>授权麦克风</h1>
+      <p>拾穗的语音输入需要麦克风权限。弹窗里没法弹出授权框，所以借这个页面请求一次；授权一次即可。</p>
+      <p>语音转文字由 Chrome 内置的语音识别完成（音频经 Google 语音服务），不经过拾穗的任何服务器。</p>
+      <p id="status">正在请求麦克风权限…</p>
+      <button id="retry">重新请求</button>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
