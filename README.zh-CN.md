@@ -34,7 +34,7 @@
 <td width="50%"><img src="docs/assets/screenshot-ai.png" alt="一句话挑图"><br><b>一句话挑图</b>：「所有绿色的图片」在本机按像素判色，不上传</td>
 <td width="50%">
 
-**截图说明**：截图由 `npm run docs:shots` 在真 Chrome 里加载真扩展自动拍摄。演示页的图片是程序画的插画，视频和音频是 ffmpeg 生成的测试信号，不含任何第三方版权素材。
+**截图说明**：截图由 `npm run docs:shots` 在真 Chrome 里加载真扩展自动拍摄。演示页用的是 Wikimedia Commons 上的 CC0 照片（作者见 [docs/demo/CREDITS.md](docs/demo/CREDITS.md)），短视频由其中一张照片经 ffmpeg 生成。
 
 </td>
 </tr>
