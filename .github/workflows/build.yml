@@ -10,8 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -22,10 +22,13 @@ jobs:
       # 在干净的 CI 环境里打包：安装包里只会有构建产物，不会混进本地工作区的任何文件
       - run: npm run zip
       - run: npm run zip:firefox
-      - uses: actions/upload-artifact@v4
+      # .output 以点开头，upload-artifact 默认跳过隐藏目录（实测：No files were found），先挪到普通目录
+      - run: mkdir -p dist && cp .output/*.zip dist/ && ls -la dist
+      - uses: actions/upload-artifact@v7
         with:
           name: gleaner-packages
-          path: .output/*.zip
+          path: dist/*.zip
+          if-no-files-found: error
 
   release:
     needs: build
@@ -34,10 +37,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gleaner-packages
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: '*.zip'
           generate_release_notes: true
