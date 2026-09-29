@@ -9,7 +9,7 @@
 - 文件：安装包里的 `ffmpeg/ffmpeg-core.js`、`ffmpeg/ffmpeg-core.wasm`。
 - 来源：npm 包 [`@ffmpeg/core@0.12.10`](https://www.npmjs.com/package/@ffmpeg/core/v/0.12.10)，即 ffmpeg.wasm 项目的官方构建，**未做任何修改**。
   本仓库不包含这两个文件，装依赖时从该 npm 包原样复制。
-- 用途：只在「合并 B站 等网站的画面轨和声音轨」时，在扩展的 offscreen 页面里加载，用 `-c copy` 换容器，不重新编码。
+- 用途：只在「把视频的画面轨和声音轨合并成一个文件」时，在扩展的 offscreen 页面里加载，用 `-c copy` 换容器，不重新编码。
 - 许可证：该构建启用了 `--enable-gpl`，整体按 **GPL-2.0-or-later** 分发。**因此包含它的扩展安装包在再分发时须遵守 GPL。**
 - 对应源代码：
   - ffmpeg.wasm 构建脚本（Dockerfile 固定了下表每个组件的版本）：<https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v0.12.10>

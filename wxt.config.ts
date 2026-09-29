@@ -14,7 +14,7 @@ export default defineConfig({
   },
   manifest: ({ browser }) => ({
     name: '拾穗 Gleaner · 网页原图/视频/音频一键下载',
-    description: '一键拾取网页里的原图、视频和音频：原图自动升级、B站 音画自动合并、真暂停与断点续传。零上报，全部本地处理。',
+    description: '一键拾取网页里的原图、视频和音频：原图自动升级、视频音画自动合并、真暂停与断点续传。零上报，全部本地处理。',
     default_locale: undefined,
     permissions: [
       'downloads',

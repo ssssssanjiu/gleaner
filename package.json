@@ -1,7 +1,7 @@
 {
   "name": "gleaner",
-  "version": "0.2.0",
-  "description": "拾穗 Gleaner：开源浏览器扩展，一键拾取网页里的原图、视频和音频（B站 音画自动合并、原图自动升级、真暂停/断点续传）",
+  "version": "0.2.1",
+  "description": "拾穗 Gleaner：开源浏览器扩展，一键拾取网页里的原图、视频和音频（原图自动升级、视频音画自动合并、真暂停与断点续传）",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -20,7 +20,7 @@
     "popup-check": "node e2e/popup-check.mjs",
     "sw-check": "node e2e/sw-check.mjs",
     "live-bili": "OG_OUT_DIR=.output-e2e wxt build && node e2e/bili-live.mjs",
-    "docs:shots": "OG_OUT_DIR=.output-e2e wxt build && node scripts/docs-shots.mjs"
+    "docs:shots": "OG_OUT_DIR=.output-e2e wxt build && node scripts/docs-shots.mjs && node scripts/hero.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

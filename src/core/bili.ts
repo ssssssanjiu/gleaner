@@ -181,7 +181,7 @@ export function biliMediaHit(tracks: BiliTracks, maxBytes = MAX_MEDIA_BYTES): Me
     pairedAudioBackupUrls: a?.backups.length ? a.backups : undefined,
     curated: true,
     size,
-    name: `B站 ${p ? `${p}P` : ''}${codec ? ` · ${CODEC_NAME[codec]}` : ''}${
+    name: `${p ? `${p}P` : '视频'}${codec ? ` · ${CODEC_NAME[codec]}` : ''}${
       tooBig ? ` · 约 ${Math.round(size! / 1048576)}MB，超出 ${Math.round(maxBytes / 1048576)}MB 上限，下不了` : ''
     }`.trim(),
     coversKeys: [...tracks.video, ...tracks.audio].map((t) => basenameKey(t.url)),

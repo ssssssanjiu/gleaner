@@ -48,7 +48,7 @@ const artSvg = ([, w, h, top, bottom, far, near, sun]) => `<svg xmlns="http://ww
   <path d="M0 ${(84 * h) / w} L30 ${(66 * h) / w} L55 ${(80 * h) / w} L80 ${(64 * h) / w} L100 ${(78 * h) / w} L100 ${(100 * h) / w} L0 ${(100 * h) / w} Z" fill="${near}"/>
 </svg>`;
 
-// ---------- 本地服务器（www.bilibili.com 经 host-resolver-rules 指到这里） ----------
+// ---------- 本地服务器（gallery.example 经 host-resolver-rules 指到这里） ----------
 const heldImgs = [];
 let holdImages = false;
 const png = new Map(); // 名字 → PNG 字节（启动后用浏览器画出来，AI 助手按颜色筛要真像素）
@@ -65,8 +65,8 @@ const server = http.createServer((req, res) => {
     else send();
     return;
   }
-  if (url.startsWith('/bili/') || url.startsWith('/music/')) {
-    const body = /30280|theme/.test(url) ? A : V;
+  if (url.startsWith('/media/') || url.startsWith('/music/')) {
+    const body = url.startsWith('/music/') ? A : V;
     const r = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
     if (r) {
       const start = Number(r[1]);
@@ -80,28 +80,29 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': url.startsWith('/music/') ? 'audio/mp4' : 'video/mp4', 'content-length': String(body.length) });
     return res.end(body);
   }
-  if (url.startsWith('/video/BVdemo')) {
-    const host = `http://www.bilibili.com:${server.address().port}`;
-    const t = (id, codecid, codecs, w, h, name, bw) => ({
-      id, codecid, codecs, width: w, height: h, bandwidth: bw,
-      baseUrl: `${host}/bili/${name}?upsig=demo`, backupUrl: [],
-    });
-    const playinfo = { code: 0, data: { dash: {
-      duration: 8,
-      video: [
-        t(32, 7, 'avc1.64001F', 852, 480, 'demo-1-30032.m4s', 632933),
-        t(32, 13, 'av01.0.08M.08', 852, 480, 'demo-1-100023.m4s', 271685),
-      ],
-      audio: [t(30280, 0, 'mp4a.40.2', 0, 0, 'demo-1-30280.m4s', 190000)],
-    } } };
+  if (url.startsWith('/landscapes')) {
     const cards = ART.map(([n, w, h]) =>
-      `<figure><img src="/art/${n}.png" alt="${n}" width="${Math.round((260 * w) / Math.max(w, h))}"><figcaption>${n}</figcaption></figure>`).join('');
+      `<figure><img src="/art/${n}.png" alt="${n}"><figcaption>${n[0].toUpperCase() + n.slice(1)} <span>${w}×${h}</span></figcaption></figure>`).join('');
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    return res.end(`<!doctype html><meta charset="utf-8"><title>风景插画合集 · 延时摄影_哔哩哔哩_bilibili</title>
-<script>window.__playinfo__=${JSON.stringify(playinfo)}</script>
-<style>body{font:14px system-ui;margin:24px;background:#fafafa}.g{display:flex;flex-wrap:wrap;gap:12px}figure{margin:0}</style>
-<h2>风景插画合集（演示页）</h2><audio src="/music/theme.m4a" controls></audio><div class="g">${cards}</div>
-<script>fetch('/bili/demo-1-100023.m4s?upsig=demo&range=0-99999');fetch('/bili/demo-1-30280.m4s?upsig=demo&range=0-9999');</script>`);
+    return res.end(`<!doctype html><meta charset="utf-8"><title>Landscapes · Illustration Collection</title>
+<style>
+  body{margin:0;background:#f6f4ef;color:#1d1b17;font:15px -apple-system,'SF Pro Text','PingFang SC',system-ui,sans-serif}
+  header{padding:40px 56px 8px;display:flex;align-items:baseline;gap:18px}
+  h1{margin:0;font:600 34px ui-serif,'New York',Georgia,serif;letter-spacing:-.5px}
+  header p{margin:0;color:#8a8378}
+  .media{margin:18px 56px 8px;display:flex;gap:22px;align-items:center;color:#8a8378;font-size:13px}
+  .media video{width:220px;border-radius:10px;display:block}
+  .media audio{height:32px}
+  .g{columns:4 220px;column-gap:18px;padding:18px 56px 56px}
+  figure{margin:0 0 18px;break-inside:avoid}
+  img{width:100%;display:block;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06)}
+  figcaption{display:flex;justify-content:space-between;padding:8px 2px 0;font-size:13px;color:#4a463f}
+  figcaption span{color:#a39c90;font-variant-numeric:tabular-nums}
+</style>
+<header><h1>Landscapes</h1><p>An illustration collection · 8 works</p></header>
+<div class="media"><video src="/media/timelapse.mp4" poster="/art/night.png" preload="metadata" muted playsinline></video>
+  <span>Soundtrack</span><audio src="/music/theme.m4a" controls></audio></div>
+<div class="g">${cards}</div>`);
   }
   res.writeHead(404);
   res.end();
@@ -120,7 +121,7 @@ const browser = await puppeteer.launch({
   executablePath: CHROME, headless: false, userDataDir: profileDir, pipe: true,
   ignoreDefaultArgs: ['--disable-extensions'],
   args: ['--no-first-run', '--enable-unsafe-extension-debugging', '--window-position=2200,2200', '--window-size=1200,900',
-    '--host-resolver-rules=MAP www.bilibili.com 127.0.0.1', '--lang=zh-CN'],
+    '--host-resolver-rules=MAP gallery.example 127.0.0.1', '--lang=zh-CN'],
 });
 
 try {
@@ -144,7 +145,7 @@ try {
   await waitFor(async () => browser.targets().find((t) => t.type() === 'service_worker' && t.url().includes(extId)), 10000, 'SW');
 
   const page = await browser.newPage();
-  await page.goto(`http://www.bilibili.com:${port}/video/BVdemo/`, { waitUntil: 'load' });
+  await page.goto(`http://gallery.example:${port}/landscapes`, { waitUntil: 'load' });
   await sleep(1500);
   const popup = await browser.newPage();
   await popup.setViewport({ width: 740, height: 600, deviceScaleFactor: 2 });
@@ -152,11 +153,19 @@ try {
   await page.bringToFront();
   await popup.reload({ waitUntil: 'domcontentloaded' });
   await sleep(500);
+  // 只为截图：藏掉 macOS 浮动滚动条（拍摄瞬间偶尔会露出来，和界面本身无关）
+  const hideScrollbars = () => popup.addStyleTag({ content: '*::-webkit-scrollbar{display:none}' });
+  await hideScrollbars();
   const click = (text) => popup.evaluate((t) => {
     const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim().startsWith(t) && !x.disabled);
     b?.click();
     return Boolean(b);
   }, text);
+
+  // ⓪ 演示页本身（横幅里浏览器窗口的内容）
+  await page.setViewport({ width: 1280, height: 820, deviceScaleFactor: 2 });
+  await sleep(600);
+  await page.screenshot({ path: join(OUT, 'page-demo.png') });
 
   // ① 扫描结果：视频（B站 480P · H.264 · 含声音）+ 音频 + 图片（原图分辨率）
   await click('扫描');
@@ -188,6 +197,7 @@ try {
   await page.bringToFront();
   await popup.reload({ waitUntil: 'domcontentloaded' });
   await sleep(500);
+  await hideScrollbars();
   await click('扫描');
   await waitFor(async () => (await popup.$$('.cell')).length >= ART.length, 10000, '再次扫描');
   // 演示页保持在前台（执行时扩展按「当前标签页」取页面信息）；输入框用原生 setter 赋值，React 才收得到
@@ -207,35 +217,6 @@ try {
   await popup.screenshot({ path: join(OUT, 'screenshot-ai.png') });
   console.log('✓ screenshot-ai.png');
 
-  // ④ 顶部横幅（1280×640，也可当 GitHub 仓库的社交预览图）：Logo + 名字 + 真实弹窗截图
-  const logo = readFileSync(join(OUT, 'logo.svg'), 'utf8');
-  const shot = readFileSync(join(OUT, 'screenshot-scan.png')).toString('base64');
-  const hero = await browser.newPage();
-  await hero.setViewport({ width: 1280, height: 640, deviceScaleFactor: 2 });
-  await hero.setContent(`<!doctype html><meta charset="utf-8"><style>
-    body{margin:0;width:1280px;height:640px;overflow:hidden;font-family:-apple-system,'PingFang SC','Hiragino Sans GB',system-ui,sans-serif;
-      background:radial-gradient(circle at 18% 22%,#fff6df 0,#fde9c4 38%,#f7d49a 100%);display:flex;align-items:center}
-    .left{width:560px;padding-left:80px;box-sizing:border-box}
-    .logo{width:104px;height:104px;filter:drop-shadow(0 10px 24px rgba(214,120,20,.35))}
-    h1{margin:26px 0 6px;font-size:64px;letter-spacing:2px;color:#3b2a12}
-    h1 span{font-size:34px;font-weight:600;color:#a3651c;letter-spacing:0;margin-left:12px}
-    p{margin:0 0 26px;font-size:24px;line-height:1.5;color:#5b4526}
-    .chips{display:flex;flex-wrap:wrap;gap:10px}
-    .chip{background:rgba(255,255,255,.75);border:1px solid rgba(214,140,40,.35);color:#7a4a10;border-radius:999px;padding:7px 14px;font-size:16px}
-    .right{flex:1;display:flex;justify-content:center}
-    .shot{width:600px;border-radius:14px;box-shadow:0 30px 60px rgba(90,50,0,.28),0 0 0 1px rgba(0,0,0,.06);transform:rotate(-1.5deg)}
-  </style>
-  <div class="left">
-    <img class="logo" src="data:image/svg+xml;base64,${Buffer.from(logo).toString('base64')}">
-    <h1>拾穗<span>Gleaner</span></h1>
-    <p>一键拾取网页里的原图、视频和音频<br>零上报 · 下载和处理都在你的电脑上</p>
-    <div class="chips"><span class="chip">🖼 原图自动升级</span><span class="chip">🎬 B站 音画自动合并</span>
-      <span class="chip">⏸ 真暂停 · 断点续传</span><span class="chip">🤖 一句话挑图</span></div>
-  </div>
-  <div class="right"><img class="shot" src="data:image/png;base64,${shot}"></div>`);
-  await sleep(500);
-  await hero.screenshot({ path: join(OUT, 'hero.png') });
-  console.log('✓ hero.png');
 } finally {
   await browser.close().catch(() => {});
   server.close();

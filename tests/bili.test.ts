@@ -39,7 +39,7 @@ test('播放器选了 AV1 时，仍然挑同清晰度的 H.264 + 最高码率 AA
   assert.equal(file(hit.pairedAudioUrl), '42285466216-1-30280.m4s', '声音选码率最高的 30280');
   assert.equal(hit.width, 852);
   assert.equal(hit.height, 480);
-  assert.equal(hit.name, 'B站 480P · H.264');
+  assert.equal(hit.name, '480P · H.264');
   assert.ok(hit.url.includes('upsig='), '必须用清单里带签名的完整地址');
   assert.ok(hit.coversKeys!.includes('42285466216-1-100023.m4s'));
   assert.equal(hit.backupUrls?.length, 1, '备用 CDN 地址要带上（主地址 403/超时时换着试）');
