@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * 语音输入：Chrome 自带的 Web Speech API（用户拍板的方案）。
  * 免费、零后端；代价是音频经 Google 的语音服务转文字，不是纯本地 —— 设置页里明说。
@@ -20,7 +21,8 @@ export interface ListenOptions {
   lang?: string;
   onInterim?: (text: string) => void;
   onFinal: (text: string) => void;
-  onError: (message: string) => void;
+  /** code 是浏览器原始错误码（如 'not-allowed'），不随界面语言变化，供程序判断；message 才是译文 */
+  onError: (message: string, code?: string) => void;
   onEnd?: () => void;
 }
 
@@ -28,20 +30,20 @@ export function humanizeSpeechError(code: string): string {
   switch (code) {
     case 'not-allowed':
     case 'service-not-allowed':
-      return '麦克风权限未授予';
+      return t('麦克风权限未授予');
     case 'no-speech':
-      return '没听到声音，再试一次';
+      return t('没听到声音，再试一次');
     case 'audio-capture':
-      return '没有找到可用的麦克风';
+      return t('没有找到可用的麦克风');
     case 'network':
       // Chrome 的语音识别走 Google 服务器：大陆网络下几乎必然是这个错误，只说「需要联网」会让人以为自己断网了
-      return '语音识别连不上服务器（Chrome 的语音识别走 Google，大陆网络下通常需要代理）';
+      return t('语音识别连不上服务器（Chrome 的语音识别走 Google，大陆网络下通常需要代理）');
     case 'aborted':
-      return '已取消';
+      return t('已取消');
     case 'language-not-supported':
-      return '当前语言不支持';
+      return t('当前语言不支持');
     default:
-      return `语音识别出错（${code}）`;
+      return t('语音识别出错（{0}）', code);
   }
 }
 
@@ -52,7 +54,7 @@ export function createRecognizer(win: any = globalThis) {
     /** 开始听；返回停止函数 */
     listen(opts: ListenOptions): () => void {
       if (typeof Ctor !== 'function') {
-        opts.onError('当前浏览器不支持语音识别');
+        opts.onError(t('当前浏览器不支持语音识别'));
         return () => {};
       }
       const rec: RecognitionLike = new Ctor();
@@ -73,7 +75,7 @@ export function createRecognizer(win: any = globalThis) {
       };
       rec.onerror = (e: any) => {
         if (e?.error === 'aborted') return;
-        opts.onError(humanizeSpeechError(String(e?.error ?? 'unknown')));
+        opts.onError(humanizeSpeechError(String(e?.error ?? 'unknown')), String(e?.error ?? 'unknown'));
       };
       rec.onend = () => {
         if (finalText.trim()) opts.onFinal(finalText.trim());

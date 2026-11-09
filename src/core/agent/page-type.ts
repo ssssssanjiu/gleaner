@@ -1,4 +1,5 @@
 import type { Candidate, PageInfo, PageType, PageVerdict } from './types';
+import { t } from '../i18n';
 
 /**
  * 页面类型的本地判断：域名规则 + og:type + 素材构成。
@@ -38,20 +39,20 @@ export function classifyPage(page: PageInfo, candidates: Candidate[]): PageVerdi
   }
   const done = (type: PageType, reason: string): PageVerdict => ({
     type,
-    label: host ? `${LABEL[type]} · ${host}` : LABEL[type],
+    label: host ? `${t(LABEL[type])} · ${host}` : t(LABEL[type]),
     reason,
   });
 
   // 搜索结果：URL 形态最可靠
   if (/\/(search|s|so|query)\b/.test(path) || /[?&](q|query|wd|keyword|kw|search)=/.test(search)) {
-    return done('search', 'URL 带搜索参数');
+    return done('search', t('URL 带搜索参数'));
   }
 
   for (const [re, type] of HOST_RULES) {
     if (re.test(host)) {
       // 站点首页单独算（视频站首页不是视频页）
-      if (path === '/' || path === '') return done('home', `${host} 首页`);
-      return done(type, `已知站点 ${host}`);
+      if (path === '/' || path === '') return done('home', t('{0} 首页', host));
+      return done(type, t('已知站点 {0}', host));
     }
   }
 
@@ -65,9 +66,9 @@ export function classifyPage(page: PageInfo, candidates: Candidate[]): PageVerdi
   const videos = candidates.filter((c) => c.kind === 'video').length;
   const headings = page.headings.length;
 
-  if (videos >= 1 && images <= 8) return done('video', `${videos} 个视频、图片很少`);
-  if (images >= 20 && headings <= 3) return done('gallery', `${images} 张图、几乎没有标题层级`);
-  if (headings >= 3 && images <= 12) return done('article', `${headings} 级标题、图片不多`);
-  if (host && (path === '/' || path === '')) return done('home', '站点根路径');
-  return done('other', '没有明显特征');
+  if (videos >= 1 && images <= 8) return done('video', t('{0} 个视频、图片很少', videos));
+  if (images >= 20 && headings <= 3) return done('gallery', t('{0} 张图、几乎没有标题层级', images));
+  if (headings >= 3 && images <= 12) return done('article', t('{0} 级标题、图片不多', headings));
+  if (host && (path === '/' || path === '')) return done('home', t('站点根路径'));
+  return done('other', t('没有明显特征'));
 }

@@ -1,5 +1,6 @@
 import type { ColorName, Intent } from './types';
-import { sectionInQuery } from './sections';
+import { sectionInQuery, sectionText } from './sections';
+import { t } from '../i18n';
 
 /**
  * 本地意图解析：把一句中文 / 英文口语拆成「能在本机执行的条件」。
@@ -212,21 +213,21 @@ export function parseIntent(input: string): Intent {
 /** 把意图翻回人话，给结果区解释「本地按什么筛的」 */
 export function describeIntent(i: Intent): string {
   const parts: string[] = [];
-  parts.push({ image: '图片', video: '视频', audio: '音频', any: '全部素材' }[i.kind]);
+  parts.push({ image: t('图片'), video: t('视频'), audio: t('音频'), any: t('全部素材') }[i.kind]);
   if (i.colors.length) {
     const zh: Record<ColorName, string> = {
-      red: '红', orange: '橙', yellow: '黄', green: '绿', cyan: '青', blue: '蓝',
-      purple: '紫', pink: '粉', black: '黑', white: '白', gray: '灰', brown: '棕',
+      red: t('红'), orange: t('橙'), yellow: t('黄'), green: t('绿'), cyan: t('青'), blue: t('蓝'),
+      purple: t('紫'), pink: t('粉'), black: t('黑'), white: t('白'), gray: t('灰'), brown: t('棕'),
     };
-    parts.push(i.colors.map((c) => zh[c]).join('/') + '色');
+    parts.push(t('{0}色', i.colors.map((c) => zh[c]).join('/')));
   }
-  if (i.minSide) parts.push(`边长≥${i.minSide}`);
-  if (i.maxSide) parts.push(`边长≤${i.maxSide}`);
-  if (i.orientation) parts.push({ landscape: '横图', portrait: '竖图', square: '方图' }[i.orientation]);
-  if (i.section) parts.push(i.section);
-  if (i.ordinal) parts.push(`第 ${i.ordinal} 个`);
+  if (i.minSide) parts.push(t('边长≥{0}', i.minSide));
+  if (i.maxSide) parts.push(t('边长≤{0}', i.maxSide));
+  if (i.orientation) parts.push({ landscape: t('横图'), portrait: t('竖图'), square: t('方图') }[i.orientation]);
+  if (i.section) parts.push(sectionText(i.section));
+  if (i.ordinal) parts.push(t('第 {0} 个', i.ordinal));
   if (i.order && i.limit) {
-    parts.push({ largest: `最大 ${i.limit} 个`, smallest: `最小 ${i.limit} 个`, first: `前 ${i.limit} 个`, last: `最后 ${i.limit} 个` }[i.order]);
+    parts.push({ largest: t('最大 {0} 个', i.limit), smallest: t('最小 {0} 个', i.limit), first: t('前 {0} 个', i.limit), last: t('最后 {0} 个', i.limit) }[i.order]);
   }
   return parts.join(' · ');
 }

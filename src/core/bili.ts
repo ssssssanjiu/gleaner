@@ -13,6 +13,7 @@
  */
 import { MAX_MEDIA_BYTES, basenameKey } from './media';
 import type { MediaHit } from './types';
+import { t } from './i18n';
 
 export interface BiliTrack {
   url: string;
@@ -181,8 +182,8 @@ export function biliMediaHit(tracks: BiliTracks, maxBytes = MAX_MEDIA_BYTES): Me
     pairedAudioBackupUrls: a?.backups.length ? a.backups : undefined,
     curated: true,
     size,
-    name: `${p ? `${p}P` : '视频'}${codec ? ` · ${CODEC_NAME[codec]}` : ''}${
-      tooBig ? ` · 约 ${Math.round(size! / 1048576)}MB，超出 ${Math.round(maxBytes / 1048576)}MB 上限，下不了` : ''
+    name: `${p ? `${p}P` : t('视频')}${codec ? ` · ${CODEC_NAME[codec]}` : ''}${
+      tooBig ? t(' · 约 {0}MB，超出 {1}MB 上限，下不了', Math.round(size! / 1048576), Math.round(maxBytes / 1048576)) : ''
     }`.trim(),
     coversKeys: [...tracks.video, ...tracks.audio].map((t) => basenameKey(t.url)),
   };

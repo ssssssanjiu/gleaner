@@ -2,10 +2,11 @@ import type { AgentQuery, AgentResult, AgentSettings, Candidate, ColorName, Inte
 import { describeIntent, parseIntent } from './intent';
 import { classifyPage } from './page-type';
 import { analyzePixels, matchesColor } from './color';
-import { sectionMatches } from './sections';
+import { sectionMatches, sectionText } from './sections';
 import { buildDigest, resolveSelected } from './digest';
 import { SHEET_MAX_ITEMS, SHEET_MAX_SHEETS, chunk } from './sheet';
 import type { CloudReply, CloudRequest } from './claude';
+import { t } from '../i18n';
 
 /**
  * agent 主流程（纯逻辑，外部能力全部注入，便于单测）：
@@ -115,7 +116,7 @@ export async function runAgent(q: AgentQuery, settings: AgentSettings, deps: Age
   const base = { page, intent };
 
   if (!q.candidates.length) {
-    return { ok: true, via: 'local', matchedIds: [], explanation: '页面上还没扫到任何素材', ...base };
+    return { ok: true, via: 'local', matchedIds: [], explanation: t('页面上还没扫到任何素材'), ...base };
   }
 
   const { list, applied } = await localFilter(intent, q.candidates, deps.pixels);
@@ -128,18 +129,18 @@ export async function runAgent(q: AgentQuery, settings: AgentSettings, deps: Age
   if (!wantCloud) {
     return {
       ok: true, via: 'local', matchedIds: list.map((c) => c.id),
-      explanation: applied ? `本地筛选：${desc} → 命中 ${list.length} 项` : `未识别到筛选条件，列出全部 ${list.length} 项`,
+      explanation: applied ? t('本地筛选：{0} → 命中 {1} 项', desc, list.length) : t('未识别到筛选条件，列出全部 {0} 项', list.length),
       ...base,
     };
   }
 
   if (!settings.cloudEnabled) {
     const why = intent.needsCloud
-      ? `「${intent.semantic}」需要看内容才能判断`
-      : `页面上没有标记为「${intent.section}」的区块`;
+      ? t('「{0}」需要看内容才能判断', intent.semantic)
+      : t('页面上没有标记为「{0}」的区块', sectionText(intent.section ?? ''));
     return {
       ok: true, via: 'local', matchedIds: [], needsCloud: true,
-      explanation: `${why}。本地只能按颜色、尺寸、方向、位置、序号筛选；在设置里开启云端助手（需自带 API Key）后可以理解这类请求。`,
+      explanation: t('{0}。本地只能按颜色、尺寸、方向、位置、序号筛选；在设置里开启云端助手（需自带 API Key）后可以理解这类请求。', why),
       ...base,
     };
   }
@@ -157,18 +158,18 @@ export async function runAgent(q: AgentQuery, settings: AgentSettings, deps: Age
       const nums = group.map((c) => `#${ids.indexOf(c.id) + 1}`);
       const img = await deps.sheet(group, nums);
       if (!img) continue;
-      sheets.push({ ...img, caption: `联络表（每格左上角的数字是编号）：${nums[0]} ~ ${nums[nums.length - 1]}，共 ${group.length} 格` });
+      sheets.push({ ...img, caption: t('联络表（每格左上角的数字是编号）：{0} ~ {1}，共 {2} 格', nums[0], nums[nums.length - 1], group.length) });
     }
   }
 
   const reply = await deps.ask({ settings, question: q.text, digest: text, sheets });
   const matched = resolveSelected(reply.selected, ids);
   const verdict = reply.pageType && reply.pageType !== page.type
-    ? { ...page, type: reply.pageType, label: page.label.replace(/^[^·]+/, PAGE_LABEL[reply.pageType]), reason: '模型判断' }
+    ? { ...page, type: reply.pageType, label: page.label.replace(/^[^·]+/, t(PAGE_LABEL[reply.pageType])), reason: t('模型判断') }
     : page;
   return {
     ok: true, via: 'cloud', matchedIds: matched, page: verdict, intent,
-    explanation: reply.explanation || (matched.length ? `模型选出 ${matched.length} 项` : '模型没有选中任何素材'),
+    explanation: reply.explanation || (matched.length ? t('模型选出 {0} 项', matched.length) : t('模型没有选中任何素材')),
     clarify: reply.clarify,
     usage: reply.usage,
   };

@@ -3,8 +3,10 @@
  * 都归一到同一个 label，这样「评论区的视频」才能在本地按面包屑直接匹配。
  * 一份词表两头用，避免两边各写一套对不上。
  */
+import { t } from '../i18n';
 
 export interface SectionDef {
+  /** label 是稳定的中文 id（存进素材 / 参与匹配）；显示时才按语言翻译，见 sectionText */
   label: string;
   /** 匹配 DOM 线索串：`${tag} ${id} ${class} ${role} ${aria-label}` */
   dom: RegExp;
@@ -54,4 +56,9 @@ export function sectionInQuery(text: string): { label: string; re: RegExp } | nu
 export function sectionMatches(section: string | undefined, label: string): boolean {
   if (!section) return label === '正文';
   return section.includes(label);
+}
+
+/** 面包屑（'评论区 › 正文'）里的分区 label 换成当前语言，仅用于显示；标题等其他片段原样保留 */
+export function sectionText(s: string): string {
+  return s.split(' › ').map((p) => (SECTIONS.some((d) => d.label === p) ? t(p) : p)).join(' › ');
 }

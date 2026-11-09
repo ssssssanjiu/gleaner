@@ -6,6 +6,7 @@
  * - 云端可选：只有「有猫的图」这类语义请求才需要模型；默认关闭，用户自带 API Key
  * - 上云时只发页面摘要 + 缩略图联络表，不发页面全文，不发大图
  */
+import { t } from '../i18n';
 
 export type CandidateKind = 'image' | 'video' | 'audio';
 
@@ -100,9 +101,9 @@ export interface AgentSettings {
 }
 
 export const AGENT_MODELS: ReadonlyArray<{ id: string; label: string; price: string }> = [
-  { id: 'claude-opus-5', label: 'Claude Opus 5 · 最准', price: '$5 / $25 每百万 tokens' },
-  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 · 均衡', price: '$2 / $10 每百万 tokens' },
-  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 · 最快最省', price: '$1 / $5 每百万 tokens' },
+  { id: 'claude-opus-5', get label() { return t('Claude Opus 5 · 最准'); }, get price() { return t('$5 / $25 每百万 tokens'); } },
+  { id: 'claude-sonnet-5', get label() { return t('Claude Sonnet 5 · 均衡'); }, get price() { return t('$2 / $10 每百万 tokens'); } },
+  { id: 'claude-haiku-4-5', get label() { return t('Claude Haiku 4.5 · 最快最省'); }, get price() { return t('$1 / $5 每百万 tokens'); } },
 ];
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {

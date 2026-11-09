@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import type { MediaItem } from './types';
 import { fileNameFromUrl } from './filename';
 import { runPool } from './queue';
+import { t } from './i18n';
 
 /** 响应的 content-type → 扩展名（只认图片 / 音视频；其余返回 undefined） */
 const MIME_EXT: Record<string, string> = {
@@ -58,7 +59,7 @@ export async function buildZipBlobUrl(
     // 200 但回的是网页（防盗链页 / 登录页 / 运营商劫持）：不能当图片塞进包里
     if (/^(text\/html|application\/xhtml|application\/json|text\/plain)/i.test(res.headers.get('content-type') ?? '')) {
       res.body?.cancel().catch(() => {});
-      throw new Error('服务器返回的是网页而非图片');
+      throw new Error(t('服务器返回的是网页而非图片'));
     }
     // ArrayBuffer 而不是 Blob：JSZip 对非浏览器 Blob 实现（如 Node/undici）的类型探测会失败
     const buf = await res.arrayBuffer();
@@ -73,7 +74,7 @@ export async function buildZipBlobUrl(
     onProgress?.(done, failed);
   });
 
-  if (done === 0) throw new Error('全部图片下载失败，可能是防盗链或网络问题');
+  if (done === 0) throw new Error(t('全部图片下载失败，可能是防盗链或网络问题'));
 
   const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
   return { blobUrl: URL.createObjectURL(blob), done, failed };

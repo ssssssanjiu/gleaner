@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { AgentSettings, AgentUsage, PageType } from './types';
+import { t } from '../i18n';
 
 /**
  * 云端语义选择：把页面摘要（+ 缩略图联络表）交给 Claude，让它通过一个严格 schema 的
@@ -60,25 +61,25 @@ const TOOL = {
 };
 
 function humanizeApiError(e: unknown): string {
-  if (e instanceof Anthropic.AuthenticationError) return 'API Key 无效或已失效';
+  if (e instanceof Anthropic.AuthenticationError) return t('API Key 无效或已失效');
   if (e instanceof Anthropic.PermissionDeniedError) {
     // Anthropic 对不支持的地区（含大陆/港澳）统一回 403 forbidden「Request not allowed」，
     // 之前一律翻成「Key 没权限」，用户会去折腾 Key 而不是网络
     return /not allowed|region|country|territor|unsupported/i.test(e.message)
-      ? '当前网络所在地区无法访问 Anthropic API（大陆/港澳网络需要开代理后再试）'
-      : '这个 API Key 没有调用权限（若在大陆/港澳网络，也可能是地区限制，需要代理）';
+      ? t('当前网络所在地区无法访问 Anthropic API（大陆/港澳网络需要开代理后再试）')
+      : t('这个 API Key 没有调用权限（若在大陆/港澳网络，也可能是地区限制，需要代理）');
   }
-  if (e instanceof Anthropic.RateLimitError) return '请求过于频繁，稍后再试';
-  if (e instanceof Anthropic.NotFoundError) return '模型不存在或账号无权使用（换一个模型试试）';
-  if (e instanceof Anthropic.BadRequestError) return `请求被拒绝：${e.message}`;
-  if (e instanceof Anthropic.APIConnectionError) return '连不上 Anthropic API（检查网络或代理）';
-  if (e instanceof Anthropic.APIError) return `API 错误 ${e.status ?? ''}：${e.message}`;
+  if (e instanceof Anthropic.RateLimitError) return t('请求过于频繁，稍后再试');
+  if (e instanceof Anthropic.NotFoundError) return t('模型不存在或账号无权使用（换一个模型试试）');
+  if (e instanceof Anthropic.BadRequestError) return t('请求被拒绝：{0}', e.message);
+  if (e instanceof Anthropic.APIConnectionError) return t('连不上 Anthropic API（检查网络或代理）');
+  if (e instanceof Anthropic.APIError) return t('API 错误 {0}：{1}', e.status ?? '', e.message);
   return String((e as any)?.message ?? e);
 }
 
 export async function askClaude(req: CloudRequest): Promise<CloudReply> {
   const { settings } = req;
-  if (!settings.apiKey) throw new Error('还没填 API Key');
+  if (!settings.apiKey) throw new Error(t('还没填 API Key'));
 
   const client = new Anthropic({
     apiKey: settings.apiKey,
@@ -118,7 +119,7 @@ export async function askClaude(req: CloudRequest): Promise<CloudReply> {
   };
 
   if (response.stop_reason === 'refusal') {
-    throw new Error('模型拒绝了这个请求');
+    throw new Error(t('模型拒绝了这个请求'));
   }
 
   const tool = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
@@ -129,7 +130,7 @@ export async function askClaude(req: CloudRequest): Promise<CloudReply> {
       .map((b) => b.text)
       .join('')
       .trim();
-    return { selected: [], explanation: '', clarify: text || '模型没有给出可用的结果', usage };
+    return { selected: [], explanation: '', clarify: text || t('模型没有给出可用的结果'), usage };
   }
 
   const input = tool.input as {
