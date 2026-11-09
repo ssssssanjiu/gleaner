@@ -61,8 +61,12 @@ export default function App() {
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [langSetting, setLangSetting] = useState<LangSetting>('auto');
   useEffect(() => {
+    document.documentElement.lang = getLang();
     browser.storage.local.get(LANG_KEY).then((o) => setLangSetting((o?.[LANG_KEY] as LangSetting) ?? 'auto')).catch(() => {});
-    return onLangChange(rerender);
+    return onLangChange(() => {
+      document.documentElement.lang = getLang();
+      rerender();
+    });
   }, []);
   const [listening, setListening] = useState(false);
   const stopListenRef = useRef<() => void>(() => {});
@@ -239,7 +243,7 @@ export default function App() {
     browser.tabs.create({ url: `chrome://extensions/?id=${browser.runtime.id}` }).catch(() => {});
   }
 
-  const blocked = useMemo(() => unsupportedReason(tabUrl, { fileAccess }), [tabUrl, fileAccess]);
+  const blocked = useMemo(() => unsupportedReason(tabUrl, { fileAccess }), [tabUrl, fileAccess, getLang()]);
 
   const visible = useMemo(() => {
     const k = keyword.trim().toLowerCase();
@@ -262,7 +266,7 @@ export default function App() {
       ogType: pageMeta?.ogType, description: pageMeta?.description, lang: pageMeta?.lang,
     };
     return classifyPage(page, buildCandidates(items, media));
-  }, [tabUrl, pageTitle, pageMeta, items, media, blocked]);
+  }, [tabUrl, pageTitle, pageMeta, items, media, blocked, getLang()]);
 
   /**
    * 卡片要标「图片 + 分辨率」：扫描时尺寸未知的（规则升级到原图的、懒加载的），
@@ -406,7 +410,7 @@ export default function App() {
     const q = text.trim();
     if (!q || agentBusy) return;
     if (blocked) {
-      setAgentError(t('{0}，换个普通网页再试', blocked));
+      setAgentError(t('{0}，换个普通网页再试', t(blocked)));
       return;
     }
     setAgentBusy(true);
@@ -678,11 +682,11 @@ export default function App() {
           <div className="notice">
             {blocked === FILE_ACCESS_REASON ? (
               <>
-                {blocked}{t('：点「去设置」，在拾穗的详情页打开「允许访问文件网址」，然后刷新这个本地页面、重新打开面板。')}
+                {t(blocked)}{t('：点「去设置」，在拾穗的详情页打开「允许访问文件网址」，然后刷新这个本地页面、重新打开面板。')}
                 <button className="link" onClick={openExtensionSettings}>{t('去设置')}</button>
               </>
             ) : (
-              <>{blocked}{t('。切换到一个普通网页再打开面板。')}</>
+              <>{t(blocked)}{t('。切换到一个普通网页再打开面板。')}</>
             )}
           </div>
         )}

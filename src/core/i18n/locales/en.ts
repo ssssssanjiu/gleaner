@@ -224,7 +224,6 @@ const messages: Messages = {
   '权限被拒绝。点地址栏左侧的图标允许麦克风后，再点「重新请求」。': 'Permission denied. Click the icon at the left of the address bar to allow the microphone, then click "Request again".',
   '没有找到麦克风设备。': 'No microphone device found.',
   '请求失败：{0}': 'Request failed: {0}',
-  '"用一句话说要什么：所有绿色的图片 / 评论区的视频 / 最大的 3 张图"': '"Describe what you want: all green images / videos in the comments / the 3 largest images"',
   'Claude Opus 5 · 最准': 'Claude Opus 5 · Most accurate',
   '$5 / $25 每百万 tokens': '$5 / $25 per million tokens',
   'Claude Sonnet 5 · 均衡': 'Claude Sonnet 5 · Balanced',

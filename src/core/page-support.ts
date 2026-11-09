@@ -8,8 +8,11 @@ export interface PageSupportContext {
   fileAccess?: boolean;
 }
 
-/** 本地文件页面没授权时的提示（弹窗据此显示「去设置」的具体步骤） */
-export const FILE_ACCESS_REASON = t('本地文件页面需要先在扩展管理里打开「允许访问文件网址」');
+/**
+ * 本地文件页面没授权时的提示（弹窗据此显示「去设置」的具体步骤）。
+ * 模块加载时语言还没读到，所以这里是不翻译的稳定 id（同时是中文原文），显示时再 t()（key 在 en.ts）。
+ */
+export const FILE_ACCESS_REASON = '本地文件页面需要先在扩展管理里打开「允许访问文件网址」';
 
 /**
  * 浏览器禁止扩展向某些页面注入脚本。与其等 executeScript 抛出英文原始报错，

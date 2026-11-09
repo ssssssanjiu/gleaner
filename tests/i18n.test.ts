@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { AGENT_MODELS } from '../src/core/agent/types';
+import { FILE_ACCESS_REASON } from '../src/core/page-support';
 import { DEFAULT_LOCALE, LOCALES, pickLocale, setLang, t } from '../src/core/i18n';
 
 const ALL = ['en', 'zh-CN', 'zh-TW', 'pt', 'pt-BR', 'ja'];
@@ -54,6 +56,13 @@ function usedKeys(): Set<string> {
 test('en 是参考语言：源码里每个 t() key 都有译文', () => {
   const missing = [...usedKeys()].filter((k) => !(k in LOCALES.en.messages));
   assert.deepEqual(missing, []);
+});
+
+test('动态 key（静态扫描看不到的）也有译文', () => {
+  setLang('en');
+  assert.match(t(FILE_ACCESS_REASON), /file URLs/);
+  assert.match(t(AGENT_MODELS[0].label), /Claude Opus/);
+  setLang('zh-CN');
 });
 
 test('每种语言的译文占位符和中文 key 一致', () => {
