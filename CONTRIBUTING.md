@@ -61,3 +61,17 @@ npm run dev
 ```bash
 npm run compile   # tsc --noEmit，PR 前必须通过
 ```
+
+## 加一种界面语言 / Adding a UI language
+
+界面文案在代码里写成 `t('中文原文', ...args)`，中文原文就是 key（源语言，无需字典）；其他语言的译文放在 [`src/core/i18n/locales/`](src/core/i18n/locales/)。
+UI strings are written as `t('中文原文', ...args)`: the Chinese source text is the key (the source language, no catalog needed); other languages live in `src/core/i18n/locales/` as Chinese → translation maps.
+
+1. 复制 `locales/en.ts` 为 `locales/<code>.ts`（如 `ja.ts`、`pt-BR.ts`），只翻译右边；左边的中文 key 不要改，`{0}` `{1}` 占位符要保留（可调换顺序）。没翻的 key 会自动回退到英文（默认语言）。
+   Copy `locales/en.ts` to `locales/<code>.ts` and translate the right-hand side only. Keep the Chinese keys and the `{0}` `{1}` placeholders (their order may change). Missing keys fall back to English (the default language).
+2. 在 [`locales.ts`](src/core/i18n/locales.ts) 里 import 并登记一行（`name` 写该语言的自称）。设置里的语言下拉、浏览器语言自动匹配（`pickLocale`）会自动带上。
+   Import it in `locales.ts` and add one line (`name` is the language's own name). The settings dropdown and automatic browser-language matching pick it up.
+3. 可选：复制 `src/public/_locales/en` 为 `_locales/<code>`（Chrome 用下划线，如 `pt_BR`），翻译扩展商店里显示的名字和描述。
+   Optional: copy `src/public/_locales/en` to `_locales/<code>` (underscore form, e.g. `pt_BR`) to localize the extension name and description.
+4. 新增界面文案时：写 `t('中文原文')`，并补进 `en.ts`（`npm test` 会检查所有 `t()` 的 key 在 `en.ts` 里都有，以及占位符是否对得上）。
+   When adding UI text, write `t('中文原文')` and add it to `en.ts`; `npm test` checks that every `t()` key exists there and that placeholders match.
