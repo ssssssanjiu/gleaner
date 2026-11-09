@@ -1,4 +1,5 @@
 import type { TaskProgress } from '@/core/types';
+import { t } from '@/core/i18n';
 
 /**
  * 弹窗进度区的视图状态。进度有两个来源，必须分开处理：
@@ -87,16 +88,16 @@ export function visibleBars(v: ProgressView): { job: TaskProgress | null; oneOff
 
 /** 进度条左侧的说明文字 */
 export function progressLabel(p: TaskProgress): string {
-  if (p.state === 'paused') return '已暂停';
+  if (p.state === 'paused') return t('已暂停');
   if (p.message) return p.message;
   switch (p.state) {
     case 'running':
-      return '下载中';
+      return t('下载中');
     case 'cancelled':
-      return '已取消';
+      return t('已取消');
     case 'done':
-      return p.failed ? `${p.failed} 个失败，原因见下载记录` : '全部完成';
+      return p.failed ? t('{0} 个失败，原因见下载记录', p.failed) : t('全部完成');
     default:
-      return p.running ? '处理中' : '已结束';
+      return p.running ? t('处理中') : t('已结束');
   }
 }

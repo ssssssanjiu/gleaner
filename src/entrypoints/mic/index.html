@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>拾穗 Gleaner · 麦克风授权</title>
+    <title>Gleaner · Microphone access</title>
     <style>
       body {
         margin: 0;
@@ -40,11 +40,11 @@
   </head>
   <body>
     <main>
-      <h1>授权麦克风</h1>
-      <p>拾穗的语音输入需要麦克风权限。弹窗里没法弹出授权框，所以借这个页面请求一次；授权一次即可。</p>
-      <p>语音转文字由 Chrome 内置的语音识别完成（音频经 Google 语音服务），不经过拾穗的任何服务器。</p>
-      <p id="status">正在请求麦克风权限…</p>
-      <button id="retry">重新请求</button>
+      <h1 id="title">Allow microphone</h1>
+      <p id="p1">Gleaner's voice input needs microphone permission. The popup cannot show a permission prompt, so this page requests it once; you only need to allow it one time.</p>
+      <p id="p2">Speech-to-text is done by Chrome's built-in speech recognition (audio goes through Google speech services) and never passes through any Gleaner server.</p>
+      <p id="status">Requesting microphone permission…</p>
+      <button id="retry">Request again</button>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

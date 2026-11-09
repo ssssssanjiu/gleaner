@@ -2,6 +2,9 @@ import { buildZipBlobUrl } from '@/core/zip';
 import type { BlobResponse, Message, ZipResponse } from '@/core/messages';
 import { patchHev1ToHvc1 } from '@/core/fmp4';
 import { muxVideoAudio } from '@/core/ffmpeg-mux';
+import { initLang, t } from '@/core/i18n';
+
+initLang();
 
 /**
  * offscreen document 的职责：在有 DOM（能 createObjectURL / 编译 WebAssembly）的
@@ -56,7 +59,7 @@ browser.runtime.onMessage.addListener(
 
 const isAbort = (e: any) => e?.name === 'AbortError';
 const failure = (e: any, kind: 'media' | 'image' = 'media'): BlobResponse =>
-  isAbort(e) ? { ok: false, error: '已暂停', aborted: true } : { ok: false, error: humanizeError(e, kind) };
+  isAbort(e) ? { ok: false, error: t('已暂停'), aborted: true } : { ok: false, error: humanizeError(e, kind) };
 
 /** 抓取失败的种类：文案要按「视频 / 图片」给出用户能照做的建议 */
 class FetchFailure extends Error {
@@ -91,19 +94,19 @@ function humanizeError(e: any, kind: 'media' | 'image'): string {
   if (e instanceof FetchFailure) {
     if (e.code === 'forbidden') {
       return media
-        ? '服务器拒绝（HTTP 403）—— 链接可能已过期，重新播放一下再试'
-        : '服务器拒绝（HTTP 403）—— 该站有防盗链，带上来源页重试仍被拒绝';
+        ? t('服务器拒绝（HTTP 403）—— 链接可能已过期，重新播放一下再试')
+        : t('服务器拒绝（HTTP 403）—— 该站有防盗链，带上来源页重试仍被拒绝');
     }
     if (e.code === 'html') {
       return media
-        ? '服务器返回的是网页而非媒体（链接可能已过期，重新播放一下再试）'
-        : '服务器返回的是网页而非图片（多半是防盗链或需要登录）';
+        ? t('服务器返回的是网页而非媒体（链接可能已过期，重新播放一下再试）')
+        : t('服务器返回的是网页而非图片（多半是防盗链或需要登录）');
     }
-    return `服务器拒绝（HTTP ${e.status}）`;
+    return t('服务器拒绝（HTTP {0}）', e.status);
   }
   const raw = String(e?.message ?? e);
   if (/Failed to fetch|NetworkError/i.test(raw)) {
-    return media ? '抓取失败（链接可能已过期，重新播放一下再试）' : '抓取失败（网络不通或被防盗链拦截）';
+    return media ? t('抓取失败（链接可能已过期，重新播放一下再试）') : t('抓取失败（网络不通或被防盗链拦截）');
   }
   return raw;
 }
@@ -191,7 +194,7 @@ async function fetchResumable(
     };
     partials.set(url, part);
   }
-  if (part.total > maxBytes) throw new Error(`文件 ${(part.total / 1048576).toFixed(0)}MB，超出上限`);
+  if (part.total > maxBytes) throw new Error(t('文件 {0}MB，超出上限', (part.total / 1048576).toFixed(0)));
 
   if (!res.body) {
     const buf = new Uint8Array(await res.arrayBuffer());
@@ -208,7 +211,7 @@ async function fetchResumable(
       part.received += value.byteLength;
       if (part.received > maxBytes) {
         reader.cancel().catch(() => {});
-        throw new Error('文件过大，超出上限');
+        throw new Error(t('文件过大，超出上限'));
       }
       if (part.received - last > 512 * 1024) {
         last = part.received;
@@ -224,7 +227,7 @@ async function fetchResumable(
     off += c.byteLength;
   }
   if (partials.get(url) === part) partials.delete(url); // 抓完就放掉分块引用，峰值内存从 2 份降到 1 份
-  if (!bytes.byteLength) throw new Error('抓到 0 字节（响应为空）');
+  if (!bytes.byteLength) throw new Error(t('抓到 0 字节（响应为空）'));
   return { bytes, mime };
 }
 
@@ -290,7 +293,7 @@ async function muxToBlob(videoUrls: string[], audioUrls: string[], maxBytes: num
   }
   if (video.byteLength + audio.byteLength > maxBytes) {
     throw new Error(
-      `音视频合计 ${((video.byteLength + audio.byteLength) / 1048576).toFixed(0)}MB，超出上限`,
+      t('音视频合计 {0}MB，超出上限', ((video.byteLength + audio.byteLength) / 1048576).toFixed(0)),
     );
   }
 
