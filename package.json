@@ -13,7 +13,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
     "postinstall": "node scripts/prepare-public.mjs && wxt prepare",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --import ./tests/setup-i18n.ts --test tests/*.test.ts",
     "selftest": "node scripts/build-selftest.mjs",
     "e2e": "OG_OUT_DIR=.output-e2e wxt build && node e2e/run.mjs",
     "mux-check": "node e2e/mux-check.mjs",
