@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type {
   HistoryEntry, JobItemView, MediaHit, MediaItem, PageMeta, ScanOptions, TaskProgress,
 } from '@/core/types';
@@ -18,6 +18,11 @@ import {
   EMPTY_VIEW, clearFinished, isLive, onBroadcast, onState, progressLabel, visibleBars,
 } from './progress';
 import type { ProgressView } from './progress';
+import { LANG_KEY, LOCALE_OPTIONS, getLang, onLangChange, t } from '@/core/i18n';
+import type { LangSetting } from '@/core/i18n';
+import { sectionText } from '@/core/agent/sections';
+
+const noResponse = () => t('无响应');
 
 const DEFAULT_SCAN: ScanOptions = { autoScroll: true, minSize: 200, includeBackground: true };
 
@@ -52,6 +57,17 @@ export default function App() {
   const [agentError, setAgentError] = useState('');
   const [agentSettings, setAgentSettings] = useState<AgentSettings>(DEFAULT_AGENT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
+  // 语言：t() 读模块级 locale，storage 变化时 onLangChange 触发整体重渲染
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
+  const [langSetting, setLangSetting] = useState<LangSetting>('auto');
+  useEffect(() => {
+    document.documentElement.lang = getLang();
+    browser.storage.local.get(LANG_KEY).then((o) => setLangSetting((o?.[LANG_KEY] as LangSetting) ?? 'auto')).catch(() => {});
+    return onLangChange(() => {
+      document.documentElement.lang = getLang();
+      rerender();
+    });
+  }, []);
   const [listening, setListening] = useState(false);
   const stopListenRef = useRef<() => void>(() => {});
   const scannedRef = useRef(false);
@@ -72,7 +88,7 @@ export default function App() {
     try {
       const tab = await currentTab();
       if (!tab?.id) {
-        setMediaNote('拿不到当前标签页');
+        setMediaNote(t('拿不到当前标签页'));
         return [];
       }
       const sniffed: ActionResponse = await browser.runtime
@@ -84,8 +100,8 @@ export default function App() {
         .then((r) => r as MediaScanResponse)
         .catch((e): MediaScanResponse => ({ ok: false, error: String(e?.message ?? e) }));
 
-      if (!sniffed?.ok) notes.push(`后台嗅探不可用（${sniffed?.error ?? '无响应'}）`);
-      if (!dom?.ok) notes.push('页面脚本未注入，刷新页面后重试');
+      if (!sniffed?.ok) notes.push(t('后台嗅探不可用（{0}）', sniffed?.error ?? noResponse()));
+      if (!dom?.ok) notes.push(t('页面脚本未注入，刷新页面后重试'));
 
       // 跨 CDN 去重 + 音视频轨配对成一条，见 core/media.ts
       const list = consolidateMedia([
@@ -219,7 +235,7 @@ export default function App() {
       .sendMessage({ type: 'REVEAL', downloadId } satisfies Message)
       .catch((e): ActionResponse => ({ ok: false, error: String(e?.message ?? e) }))) as ActionResponse | undefined;
     if (!res) return;
-    if (!res.ok) showFlash(`没能打开文件位置：${humanizeError(res.error)}`, true);
+    if (!res.ok) showFlash(t('没能打开文件位置：{0}', humanizeError(res.error)), true);
     else if (res.note) showFlash(res.note);
   }
 
@@ -227,7 +243,7 @@ export default function App() {
     browser.tabs.create({ url: `chrome://extensions/?id=${browser.runtime.id}` }).catch(() => {});
   }
 
-  const blocked = useMemo(() => unsupportedReason(tabUrl, { fileAccess }), [tabUrl, fileAccess]);
+  const blocked = useMemo(() => unsupportedReason(tabUrl, { fileAccess }), [tabUrl, fileAccess, getLang()]);
 
   const visible = useMemo(() => {
     const k = keyword.trim().toLowerCase();
@@ -250,7 +266,7 @@ export default function App() {
       ogType: pageMeta?.ogType, description: pageMeta?.description, lang: pageMeta?.lang,
     };
     return classifyPage(page, buildCandidates(items, media));
-  }, [tabUrl, pageTitle, pageMeta, items, media, blocked]);
+  }, [tabUrl, pageTitle, pageMeta, items, media, blocked, getLang()]);
 
   /**
    * 卡片要标「图片 + 分辨率」：扫描时尺寸未知的（规则升级到原图的、懒加载的），
@@ -285,7 +301,7 @@ export default function App() {
     setPview(clearFinished);
     try {
       const tab = await currentTab();
-      if (!tab?.id) throw new Error('拿不到当前标签页');
+      if (!tab?.id) throw new Error(t('拿不到当前标签页'));
       setPageTitle(tab.title ?? '');
 
       const send = () =>
@@ -303,7 +319,7 @@ export default function App() {
         res = (await send()) as ScanResponse;
       }
 
-      if (!res?.ok) throw new Error(res?.error ?? '扫描无响应');
+      if (!res?.ok) throw new Error(res?.error ?? t('扫描无响应'));
       setItems(res.result.items);
       setSelected(new Set(res.result.items.map((i) => i.id)));
       if (res.result.page) setPageMeta(res.result.page);
@@ -353,7 +369,7 @@ export default function App() {
           pageUrl: tabUrl,
         };
     const res = (await browser.runtime.sendMessage(msg)) as { ok: boolean; error?: string };
-    if (!res?.ok) setError(res?.error ?? '下载失败');
+    if (!res?.ok) setError(res?.error ?? t('下载失败'));
     // 任务结束后刷新记录区
     if (res?.ok && !asZip) setTimeout(refreshState, 500);
   }
@@ -378,7 +394,7 @@ export default function App() {
         tabId: tab?.id,
       } satisfies Message)
       .catch((e) => ({ ok: false, error: String(e?.message ?? e) }))) as ActionResponse;
-    if (!res?.ok) setError(res?.error ?? '下载失败');
+    if (!res?.ok) setError(res?.error ?? t('下载失败'));
     else setTimeout(refreshState, 500);
   }
 
@@ -394,7 +410,7 @@ export default function App() {
     const q = text.trim();
     if (!q || agentBusy) return;
     if (blocked) {
-      setAgentError(`${blocked}，换个普通网页再试`);
+      setAgentError(t('{0}，换个普通网页再试', t(blocked)));
       return;
     }
     setAgentBusy(true);
@@ -402,7 +418,7 @@ export default function App() {
     setAgentResult(null);
     try {
       const tab = await currentTab();
-      if (!tab?.id) throw new Error('拿不到当前标签页');
+      if (!tab?.id) throw new Error(t('拿不到当前标签页'));
       // 还没扫过就先扫一遍：助手需要完整的候选列表
       let curItems = items;
       if (!scannedRef.current) curItems = await scan();
@@ -420,7 +436,7 @@ export default function App() {
       const res = (await browser.runtime.sendMessage({
         type: 'AGENT_QUERY', text: q, page, candidates,
       } satisfies Message)) as ActionResponse | undefined;
-      if (!res?.ok) throw new Error(res?.error ?? '助手无响应');
+      if (!res?.ok) throw new Error(res?.error ?? t('助手无响应'));
       const r = res.agent!;
       setAgentResult(r);
       // 命中项直接打勾：图片在网格里、音视频在媒体区
@@ -451,11 +467,11 @@ export default function App() {
         setAgentText(t);
         void runAssistant(t);
       },
-      onError: (m) => {
+      onError: (m, code) => {
         setAgentError(m);
         setListening(false);
         // 弹窗里弹不出授权框，借一个扩展页面请求一次
-        if (/权限/.test(m)) openMicPage();
+        if (code === 'not-allowed' || code === 'service-not-allowed') openMicPage();
       },
       onEnd: () => setListening(false),
     });
@@ -480,16 +496,16 @@ export default function App() {
         <span className="p-label" title={label}>{label}</span>
         <span className="p-count">
           {p.done}/{p.total}
-          {p.failed ? ` · 失败 ${p.failed}` : ''}
+          {p.failed ? t(' · 失败 {0}', p.failed) : ''}
         </span>
         {kind === 'job' && isLive(p) && (
           <span className="job-controls">
             {p.state === 'running' ? (
-              <button onClick={() => control('pause')}>暂停</button>
+              <button onClick={() => control('pause')}>{t('暂停')}</button>
             ) : (
-              <button onClick={() => control('resume')}>继续</button>
+              <button onClick={() => control('resume')}>{t('继续')}</button>
             )}
-            <button onClick={() => control('cancel')}>取消</button>
+            <button onClick={() => control('cancel')}>{t('取消')}</button>
           </span>
         )}
       </div>
@@ -507,9 +523,9 @@ export default function App() {
     <div className="app">
       <header>
         <div className="brand">
-          拾穗 <span className="brand-en">Gleaner</span> <span className="badge">v0.2</span>
+          {getLang() === 'zh-CN' && '拾穗 '}<span className="brand-en">Gleaner</span> <span className="badge">v0.2</span>
         </div>
-        <div className="sub">零上报 · 全本地处理</div>
+        <div className="sub">{t('零上报 · 全本地处理')}</div>
       </header>
 
       <div className="top">
@@ -518,7 +534,7 @@ export default function App() {
             <div className="agent-row">
               <input
                 className="search"
-                placeholder="用一句话说要什么：所有绿色的图片 / 评论区的视频 / 最大的 3 张图"
+                placeholder={t('用一句话说要什么：所有绿色的图片 / 评论区的视频 / 最大的 3 张图')}
                 value={agentText}
                 onChange={(e) => setAgentText(e.target.value)}
                 onKeyDown={(e) => {
@@ -528,17 +544,17 @@ export default function App() {
               />
               <button
                 className={`mic ${listening ? 'listening' : ''}`}
-                title={recognizer.supported ? (listening ? '停止' : '语音输入') : '当前浏览器不支持语音识别'}
+                title={recognizer.supported ? (listening ? t('停止') : t('语音输入')) : t('当前浏览器不支持语音识别')}
                 onClick={toggleVoice}
                 disabled={!recognizer.supported || agentBusy}
               >
                 {listening ? '■' : '🎤'}
               </button>
               <button className="primary" onClick={() => runAssistant(agentText)} disabled={agentBusy || !agentText.trim()}>
-                {agentBusy ? '思考中…' : '执行'}
+                {agentBusy ? t('思考中…') : t('执行')}
               </button>
               <button className="link" onClick={() => setShowSettings((s) => !s)}>
-                {showSettings ? '收起' : 'AI 设置'}
+                {showSettings ? t('收起') : t('AI 设置')}
               </button>
             </div>
 
@@ -549,52 +565,67 @@ export default function App() {
                 </span>
               )}
               {agentResult && (
-                <span className={`chip ${agentResult.via}`} title={agentResult.usage ? `${agentResult.usage.model} · 输入 ${agentResult.usage.inputTokens} / 输出 ${agentResult.usage.outputTokens} tokens` : '没有联网'}>
-                  {agentResult.via === 'cloud' ? '云端理解' : '本地完成'}
+                <span className={`chip ${agentResult.via}`} title={agentResult.usage ? t('{0} · 输入 {1} / 输出 {2} tokens', agentResult.usage.model, agentResult.usage.inputTokens, agentResult.usage.outputTokens) : t('没有联网')}>
+                  {agentResult.via === 'cloud' ? t('云端理解') : t('本地完成')}
                 </span>
               )}
               {agentError ? (
                 <span className="agent-explain warn">{agentError}</span>
               ) : agentResult ? (
                 <span className={`agent-explain ${agentResult.needsCloud ? 'warn' : ''}`}>
-                  {agentResult.clarify ? `追问：${agentResult.clarify}` : agentResult.explanation}
+                  {agentResult.clarify ? t('追问：{0}', agentResult.clarify) : agentResult.explanation}
                 </span>
               ) : (
                 <span className="agent-explain">
-                  {listening ? '正在听…' : '颜色、尺寸、位置在本地筛；需要看内容的请求可选开云端'}
+                  {listening ? t('正在听…') : t('颜色、尺寸、位置在本地筛；需要看内容的请求可选开云端')}
                 </span>
               )}
               {agentResult?.needsCloud && (
-                <button className="link" onClick={() => setShowSettings(true)}>去开启</button>
+                <button className="link" onClick={() => setShowSettings(true)}>{t('去开启')}</button>
               )}
               {(agentResult || chosenMedia.length > 0) && totalChosen > 0 && (
                 <button className="primary" onClick={downloadChosenAll}>
-                  下载选中 {totalChosen} 项
+                  {t('下载选中 {0} 项', totalChosen)}
                 </button>
               )}
             </div>
 
             {showSettings && (
               <div className="agent-settings">
+                <label htmlFor="og-lang">{t('界面语言')}</label>
+                <select
+                  id="og-lang"
+                  value={langSetting}
+                  onChange={(e) => {
+                    const v = e.target.value as LangSetting;
+                    setLangSetting(v);
+                    browser.storage.local.set({ [LANG_KEY]: v }).catch(() => {});
+                  }}
+                >
+                  <option value="auto">{t('跟随浏览器')}</option>
+                  {LOCALE_OPTIONS.map((l) => (
+                    <option key={l.code} value={l.code}>{l.name}</option>
+                  ))}
+                </select>
                 <label>
                   <input
                     type="checkbox"
                     checked={agentSettings.cloudEnabled}
                     onChange={(e) => saveAgentSettings({ cloudEnabled: e.target.checked })}
                   />
-                  开启云端助手
+                  {t('开启云端助手')}
                 </label>
-                <span className="h-meta">默认关闭；开启后才会把请求发给 Anthropic</span>
+                <span className="h-meta">{t('默认关闭；开启后才会把请求发给 Anthropic')}</span>
                 <label htmlFor="og-key">API Key</label>
                 <input
                   id="og-key"
                   type="password"
-                  placeholder="sk-ant-…（只存在本机，不会上传到别处）"
+                  placeholder={t('sk-ant-…（只存在本机，不会上传到别处）')}
                   value={agentSettings.apiKey}
                   onChange={(e) => saveAgentSettings({ apiKey: e.target.value.trim() })}
                   autoComplete="off"
                 />
-                <label htmlFor="og-model">模型</label>
+                <label htmlFor="og-model">{t('模型')}</label>
                 <select
                   id="og-model"
                   value={agentSettings.model}
@@ -607,10 +638,7 @@ export default function App() {
                   ))}
                 </select>
                 <div className="full">
-                  会发送什么：你的这句话、页面摘要（标题、素材尺寸 / alt / 所在区块，不含正文）、
-                  一张缩略图拼成的联络表。绝不发原图，绝不在你没点「执行」时发任何东西。
-                  颜色 / 尺寸 / 方向 / 位置 / 序号这类筛选永远在本机完成，不会上云。
-                  语音识别由 Chrome 内置能力完成（音频经 Google 语音服务），与拾穗无关。
+                  {t('会发送什么：你的这句话、页面摘要（标题、素材尺寸 / alt / 所在区块，不含正文）、一张缩略图拼成的联络表。绝不发原图，绝不在你没点「执行」时发任何东西。颜色 / 尺寸 / 方向 / 位置 / 序号这类筛选永远在本机完成，不会上云。语音识别由 Chrome 内置能力完成（音频经 Google 语音服务），与拾穗无关。')}
                 </div>
               </div>
             )}
@@ -624,7 +652,7 @@ export default function App() {
               checked={scanOpts.autoScroll}
               onChange={(e) => setScanOpts({ ...scanOpts, autoScroll: e.target.checked })}
             />
-            自动滚动触发懒加载
+            {t('自动滚动触发懒加载')}
           </label>
           <label>
             <input
@@ -632,10 +660,10 @@ export default function App() {
               checked={scanOpts.includeBackground}
               onChange={(e) => setScanOpts({ ...scanOpts, includeBackground: e.target.checked })}
             />
-            含 CSS 背景图
+            {t('含 CSS 背景图')}
           </label>
           <label>
-            最小边长
+            {t('最小边长')}
             <input
               type="number"
               min={0}
@@ -646,7 +674,7 @@ export default function App() {
             px
           </label>
           <button className="primary" onClick={scan} disabled={scanning || Boolean(blocked)}>
-            {scanning ? '扫描中…' : '扫描当前页面'}
+            {scanning ? t('扫描中…') : t('扫描当前页面')}
           </button>
         </section>
 
@@ -654,11 +682,11 @@ export default function App() {
           <div className="notice">
             {blocked === FILE_ACCESS_REASON ? (
               <>
-                {blocked}：点「去设置」，在拾穗的详情页打开「允许访问文件网址」，然后刷新这个本地页面、重新打开面板。
-                <button className="link" onClick={openExtensionSettings}>去设置</button>
+                {t(blocked)}{t('：点「去设置」，在拾穗的详情页打开「允许访问文件网址」，然后刷新这个本地页面、重新打开面板。')}
+                <button className="link" onClick={openExtensionSettings}>{t('去设置')}</button>
               </>
             ) : (
-              <>{blocked}。切换到一个普通网页再打开面板。</>
+              <>{t(blocked)}{t('。切换到一个普通网页再打开面板。')}</>
             )}
           </div>
         )}
@@ -670,12 +698,12 @@ export default function App() {
         {!blocked && (
           <section className="media">
             <div className="history-head media-head">
-              <span>视频 / 音频（{media.length}）</span>
-              <button className="link" onClick={refreshMedia}>刷新</button>
+              <span>{t('视频 / 音频（{0}）', media.length)}</span>
+              <button className="link" onClick={refreshMedia}>{t('刷新')}</button>
               {mediaNote ? (
                 <span className="h-meta media-warn">⚠ {mediaNote}</span>
               ) : media.length === 0 ? (
-                <span className="h-meta">未检测到 —— 先在页面上点播放，再点「刷新」</span>
+                <span className="h-meta">{t('未检测到 —— 先在页面上点播放，再点「刷新」')}</span>
               ) : null}
             </div>
             {/* 全部列出，多了在这一栏里滚动（以前只渲染前 8 条，排在后面的音频看不到也下不了） */}
@@ -689,34 +717,34 @@ export default function App() {
                   disabled={m.kind === 'stream' && m.streamKind !== 'dash-track'}
                   title={
                     m.kind === 'stream' && m.streamKind !== 'dash-track'
-                      ? 'm3u8 清单需要下载全部分片再拼接，暂不支持'
-                      : '选中后可和图片一起下载'
+                      ? t('m3u8 清单需要下载全部分片再拼接，暂不支持')
+                      : t('选中后可和图片一起下载')
                   }
                 />
                 <span className={`m-kind ${m.kind === 'audio' ? 'audio' : 'video'}`}>
-                  {m.kind === 'audio' ? '音频' : '视频'}
+                  {m.kind === 'audio' ? t('音频') : t('视频')}
                   {m.width && m.height ? ` ${m.width}×${m.height}` : ''}
                 </span>
                 <span className="j-name">
                   {m.name ?? decodeURIComponent(m.url.split('/').pop()?.split('?')[0] ?? m.url)}
                 </span>
-                {m.section ? <span className="h-meta" title="所在区块">{m.section}</span> : null}
+                {m.section ? <span className="h-meta" title={t('所在区块')}>{sectionText(m.section)}</span> : null}
                 {m.size ? <span className="h-meta">{(m.size / 1048576).toFixed(1)}MB</span> : null}
                 {m.codec === 'hevc' ? (
                   <span
                     className="h-meta"
-                    title="HEVC 编码。下载时会自动修正容器标记（hev1→hvc1），QuickTime 可直接播放"
+                    title={t('HEVC 编码。下载时会自动修正容器标记（hev1→hvc1），QuickTime 可直接播放')}
                   >
-                    HEVC·已自动兼容
+                    {t('HEVC·已自动兼容')}
                   </span>
                 ) : m.codec === 'av1' ? (
-                  <span className="h-meta media-warn" title="AV1 编码，旧版 QuickTime 不支持，请用 VLC / IINA">
-                    AV1·需 VLC
+                  <span className="h-meta media-warn" title={t('AV1 编码，旧版 QuickTime 不支持，请用 VLC / IINA')}>
+                    {t('AV1·需 VLC')}
                   </span>
                 ) : null}
                 {m.kind === 'stream' && m.streamKind !== 'dash-track' ? (
-                  <span className="h-meta" title="m3u8 清单需要下载全部分片再拼接，下个版本支持">
-                    m3u8·暂不支持
+                  <span className="h-meta" title={t('m3u8 清单需要下载全部分片再拼接，下个版本支持')}>
+                    {t('m3u8·暂不支持')}
                   </span>
                 ) : (
                   <>
@@ -726,18 +754,18 @@ export default function App() {
                         className="h-meta"
                         title={
                           m.pairedAudioUrl
-                            ? '下载时自动合并画面和声音为一个带声音的 MP4（ffmpeg，本地完成）'
-                            : '这个源只有画面轨，没有独立声音'
+                            ? t('下载时自动合并画面和声音为一个带声音的 MP4（ffmpeg，本地完成）')
+                            : t('这个源只有画面轨，没有独立声音')
                         }
                       >
-                        {m.pairedAudioUrl ? '含声音' : '无声音轨'}
+                        {m.pairedAudioUrl ? t('含声音') : t('无声音轨')}
                       </span>
                     )}
                     <button
                       className="link media-dl"
                       onClick={() => downloadMedia(m)}
                     >
-                      下载
+                      {t('下载')}
                     </button>
                   </>
                 )}
@@ -751,19 +779,19 @@ export default function App() {
             <section className="toolbar">
               <input
                 className="search"
-                placeholder="按 URL / alt 过滤"
+                placeholder={t('按 URL / alt 过滤')}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
               />
-              <button onClick={() => setSelected(new Set(visible.map((i) => i.id)))}>全选</button>
-              <button onClick={() => setSelected(new Set())}>清空</button>
+              <button onClick={() => setSelected(new Set(visible.map((i) => i.id)))}>{t('全选')}</button>
+              <button onClick={() => setSelected(new Set())}>{t('清空')}</button>
               <span className="count">
                 {chosen.length} / {items.length}
               </span>
             </section>
 
             {matchedRule.length > 0 && (
-              <div className="hint">已套用原图规则：{matchedRule.join('、')}</div>
+              <div className="hint">{t('已套用原图规则：')}{matchedRule.join(t('、'))}</div>
             )}
 
             <section className="grid">
@@ -772,7 +800,7 @@ export default function App() {
                   key={it.id}
                   className={`cell ${selected.has(it.id) ? 'on' : ''}`}
                   onClick={() => toggle(it.id)}
-                  title={it.section ? `${it.section}\n${it.url}` : it.url}
+                  title={it.section ? `${sectionText(it.section)}\n${it.url}` : it.url}
                 >
                   <img
                     src={it.previewUrl ?? it.originalUrl}
@@ -785,20 +813,20 @@ export default function App() {
                     }}
                   />
                   <span className="meta">
-                    <span className="tag">图片</span>
+                    <span className="tag">{t('图片')}</span>
                     {it.width && it.height
                       ? `${it.width}×${it.height}`
                       : probing.has(it.id)
-                        ? '测尺寸中'
+                        ? t('测尺寸中')
                         : it.ext.toUpperCase()}
-                    {it.ruleId && <i className="dot" title={`已套用原图规则：${it.ruleId}`} />}
+                    {it.ruleId && <i className="dot" title={t('已套用原图规则：{0}', it.ruleId)} />}
                   </span>
                 </button>
               ))}
             </section>
           </>
         ) : (
-          !blocked && !scanning && <div className="empty">点「扫描当前页面」，这里会列出页面上的图片</div>
+          !blocked && !scanning && <div className="empty">{t('点「扫描当前页面」，这里会列出页面上的图片')}</div>
         )}
       </main>
 
@@ -806,7 +834,7 @@ export default function App() {
         {items.length > 0 && (
           <footer>
             <label>
-              并发
+              {t('并发')}
               <input
                 type="number"
                 min={1}
@@ -817,10 +845,10 @@ export default function App() {
             </label>
             <label>
               <input type="checkbox" checked={asZip} onChange={(e) => setAsZip(e.target.checked)} />
-              打包成 ZIP
+              {t('打包成 ZIP')}
             </label>
             <button className="primary" onClick={download} disabled={!chosen.length}>
-              下载 {chosen.length} 张
+              {t('下载 {0} 张', chosen.length)}
             </button>
           </footer>
         )}
@@ -835,7 +863,7 @@ export default function App() {
             {jobItems.map((it, i) => (
               <div key={i} className={`job-item ${it.status}`}>
                 <span className="j-status">
-                  {{ pending: '排队', active: '下载中', paused: '已暂停', done: '✓', failed: '失败', cancelled: '已取消' }[it.status]}
+                  {{ pending: t('排队'), active: t('下载中'), paused: t('已暂停'), done: '✓', failed: t('失败'), cancelled: t('已取消') }[it.status]}
                 </span>
                 <span className="j-name" title={it.name}>{it.name}</span>
                 {it.percent != null && it.status === 'active' && (
@@ -850,13 +878,13 @@ export default function App() {
         {history.length > 0 && (
           <section className={`history ${liveJob ? 'compact' : ''}`}>
             <div className="history-head">
-              <span>下载记录</span>
+              <span>{t('下载记录')}</span>
               {/* 优先定位到最近任务的文件（直达任务文件夹）；没有可定位的才退回下载根目录 */}
               <button
                 className="link"
                 onClick={() => reveal(history.find((h) => h.firstDownloadId != null)?.firstDownloadId)}
               >
-                打开下载位置
+                {t('打开下载位置')}
               </button>
               <button
                 className="link"
@@ -865,7 +893,7 @@ export default function App() {
                   setHistory([]);
                 }}
               >
-                清空
+                {t('清空')}
               </button>
             </div>
             {flash && (
@@ -879,12 +907,12 @@ export default function App() {
                   <span className="h-title" title={h.title}>{h.title}</span>
                   <span className="h-meta">
                     {fmtTime(h.time)} · {h.done}/{h.total}
-                    {h.failed ? ` · 失败 ${h.failed}` : ''}
-                    {h.state === 'running' ? ' · 进行中' : h.state === 'paused' ? ' · 已暂停' : h.state === 'cancelled' ? ' · 已取消' : ''}
+                    {h.failed ? t(' · 失败 {0}', h.failed) : ''}
+                    {h.state === 'running' ? t(' · 进行中') : h.state === 'paused' ? t(' · 已暂停') : h.state === 'cancelled' ? t(' · 已取消') : ''}
                   </span>
                   {h.firstDownloadId != null && (
                     <button className="link h-reveal" onClick={() => reveal(h.firstDownloadId)}>
-                      定位文件
+                      {t('定位文件')}
                     </button>
                   )}
                   {/* 失败原因单独占一行，完整显示（最多两行，悬停看全文），不再把「定位文件」挤成竖排 */}

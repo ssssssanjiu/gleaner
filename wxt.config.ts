@@ -13,9 +13,10 @@ export default defineConfig({
     chromiumProfile: '.wxt/chrome-profile',
   },
   manifest: ({ browser }) => ({
-    name: '拾穗 Gleaner · 网页原图/视频/音频一键下载',
-    description: '一键拾取网页里的原图、视频和音频：原图自动升级、视频音画自动合并、真暂停与断点续传。零上报，全部本地处理。',
-    default_locale: undefined,
+    // 扩展名 / 描述走 _locales（src/public/_locales），跟随浏览器语言；弹窗内的语言可在设置里单独切换
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     permissions: [
       'downloads',
       'storage',
@@ -30,7 +31,7 @@ export default defineConfig({
         : ['offscreen', 'declarativeNetRequestWithHostAccess']),
     ],
     host_permissions: ['<all_urls>'],
-    action: { default_title: '拾穗 Gleaner' },
+    action: { default_title: '__MSG_extActionTitle__' },
     // ffmpeg.wasm 在 offscreen 里编译 WebAssembly，MV3 扩展页需显式放行
     ...(browser === 'firefox'
       ? {}

@@ -12,6 +12,9 @@ import { readImageSize, type ImageSize } from '@/core/imagesize';
 import { askClaude } from '@/core/agent/claude';
 import { sheetLayout } from '@/core/agent/sheet';
 import { AGENT_SETTINGS_KEY, DEFAULT_AGENT_SETTINGS, type AgentSettings } from '@/core/agent/types';
+import { initLang, t } from '@/core/i18n';
+
+const unknownReason = () => t('原因未知');
 
 const OFFSCREEN_PATH = 'offscreen.html';
 /**
@@ -31,7 +34,7 @@ let offscreenReady: Promise<void> | null = null;
 
 async function ensureOffscreen(): Promise<void> {
   const offscreen = offscreenApi();
-  if (!offscreen) throw new Error('当前浏览器不支持 offscreen');
+  if (!offscreen) throw new Error(t('当前浏览器不支持 offscreen'));
   if (!offscreenReady) {
     offscreenReady = (async () => {
       if (await offscreen.hasDocument?.()) return;
@@ -309,18 +312,18 @@ async function getHistory(): Promise<HistoryEntry[]> {
 function humanizeDownloadError(code?: string): string | undefined {
   if (!code) return undefined;
   const map: Record<string, string> = {
-    SERVER_FORBIDDEN: '服务器拒绝（403）—— 多半是防盗链或链接已过期',
-    SERVER_UNAUTHORIZED: '需要登录凭证（401）',
-    SERVER_BAD_CONTENT: '服务器没有返回文件（404）',
-    SERVER_FAILED: '服务器错误',
-    SERVER_NO_RANGE: '服务器不支持断点续传',
-    NETWORK_FAILED: '网络中断',
-    NETWORK_TIMEOUT: '网络超时',
-    NETWORK_DISCONNECTED: '网络已断开',
-    FILE_ACCESS_DENIED: '本地文件写入被拒绝',
-    FILE_NO_SPACE: '磁盘空间不足',
-    FILE_NAME_TOO_LONG: '文件名过长',
-    USER_CANCELED: '已取消',
+    SERVER_FORBIDDEN: t('服务器拒绝（403）—— 多半是防盗链或链接已过期'),
+    SERVER_UNAUTHORIZED: t('需要登录凭证（401）'),
+    SERVER_BAD_CONTENT: t('服务器没有返回文件（404）'),
+    SERVER_FAILED: t('服务器错误'),
+    SERVER_NO_RANGE: t('服务器不支持断点续传'),
+    NETWORK_FAILED: t('网络中断'),
+    NETWORK_TIMEOUT: t('网络超时'),
+    NETWORK_DISCONNECTED: t('网络已断开'),
+    FILE_ACCESS_DENIED: t('本地文件写入被拒绝'),
+    FILE_NO_SPACE: t('磁盘空间不足'),
+    FILE_NAME_TOO_LONG: t('文件名过长'),
+    USER_CANCELED: t('已取消'),
   };
   return map[code] ?? code;
 }
@@ -361,7 +364,7 @@ async function dispatch(job: Job) {
       // 之前这里没记原因，用户只看到「失败」无从排查
       const raw = String(e?.message ?? e);
       next.error = /invalid filename/i.test(raw)
-        ? `文件名不被 Chrome 接受：${next.filename.split('/').pop()}`
+        ? t('文件名不被 Chrome 接受：{0}', next.filename.split('/').pop() ?? '')
         : raw;
     }
   }
@@ -404,10 +407,10 @@ function launchPageChannel(target: JobItem) {
       if (!stale()) {
         // 这一项仍在进行、却收到「被中止」：不是用户点的暂停/取消，而是抓取被打断了。
         // 别显示成「已取消」（之前就是这么误导人的）
-        const msg = e instanceof PageChannelAborted ? '抓取被中断，请重新下载' : String(e?.message ?? e);
+        const msg = e instanceof PageChannelAborted ? t('抓取被中断，请重新下载') : String(e?.message ?? e);
         if (!useFallback(target)) {
           target.status = 'failed';
-          target.error = target.preferPageChannel ? msg : `页面通道也失败：${msg}`;
+          target.error = target.preferPageChannel ? msg : t('页面通道也失败：{0}', msg);
         }
       }
       await saveJob();
@@ -448,10 +451,10 @@ async function settleIfFinished(job: Job) {
     await upsertHistory(job);
     const msg =
       job.state === 'cancelled'
-        ? '已取消'
+        ? t('已取消')
         : c.failed
-          ? `${c.failed} 个失败：${job.items.find((i) => i.error)?.error ?? '原因未知'}`
-          : '全部完成';
+          ? t('{0} 个失败：{1}', c.failed, job.items.find((i) => i.error)?.error ?? unknownReason())
+          : t('全部完成');
     report(progressOf(job, msg));
     updateBadge(job);
   }
@@ -470,7 +473,7 @@ function registerDownloadListener() {
     const outcome = await applyTerminal(job, item, s, (delta as any).error?.current);
     if (outcome === 'retrying') {
       await saveJob();
-      report(progressOf(job, '防盗链，改用页面通道重试'));
+      report(progressOf(job, t('防盗链，改用页面通道重试')));
       return;
     }
     await dispatch(job); // 内部会 saveJob + settle + 广播 + 角标
@@ -492,7 +495,7 @@ async function applyTerminal(
         ? 'cancelled'
         : 'failed';
   if (item.status !== 'failed') return 'settled';
-  item.error = humanizeDownloadError(reason) ?? '下载被中断';
+  item.error = humanizeDownloadError(reason) ?? t('下载被中断');
   if (!item.retriedViaPage) {
     // 防盗链导致的失败：改用扩展自己的抓取通道、带上站点 Referer 重抓一次
     item.retriedViaPage = true;
@@ -557,7 +560,7 @@ async function startJob(
       running.state = 'running';
     }
     await saveJob();
-    report(progressOf(running, fresh.length ? `已加入下载列表（${fresh.length} 项）` : '已经在下载列表里了'));
+    report(progressOf(running, fresh.length ? t('已加入下载列表（{0} 项）', fresh.length) : t('已经在下载列表里了')));
     await dispatch(running); // 内部会更新下载记录、角标
     return running.id;
   }
@@ -577,7 +580,7 @@ async function startJob(
   jobLoaded = true;
   await saveJob();
   await upsertHistory(job); // 开始即入历史，Chrome 同款
-  report(progressOf(job, '开始下载'));
+  report(progressOf(job, t('开始下载')));
   await dispatch(job);
   return job.id;
 }
@@ -598,7 +601,7 @@ async function reconcile(job: Job): Promise<boolean> {
       const started = it.lastActivityAt ?? it.pageChannelStartedAt ?? 0;
       if (!started || Date.now() - started > STALE_PAGE_CHANNEL_MS) {
         it.status = 'failed';
-        it.error = '抓取被中断（扩展重载或超时），请重新下载';
+        it.error = t('抓取被中断（扩展重载或超时），请重新下载');
         changed = true;
       }
       continue;
@@ -649,7 +652,7 @@ async function abortPageFetches(items: JobItem[], keepPartial: boolean) {
 
 async function controlJob(action: 'pause' | 'resume' | 'cancel') {
   const job = await loadJob();
-  if (!job) throw new Error('没有进行中的任务');
+  if (!job) throw new Error(t('没有进行中的任务'));
   const isPage = (i: JobItem) => Boolean(i.preferPageChannel || i.retriedViaPage);
   const withId = (st: JobItem['status']) =>
     job.items.filter((i) => i.status === st && i.downloadId != null);
@@ -924,7 +927,7 @@ async function downloadMedia(
   url: string, pageTitle: string, pageUrl: string, audioUrl?: string, tabId?: number, bk: MediaBackups = {},
 ) {
   // 兜底：m3u8/mpd 是文本清单，直接下只会存下一段文本还显示「成功」
-  if (MANIFEST_EXT.test(url)) throw new Error('m3u8/mpd 清单需要下载全部分片再拼接，暂不支持');
+  if (MANIFEST_EXT.test(url)) throw new Error(t('m3u8/mpd 清单需要下载全部分片再拼接，暂不支持'));
   await ensureMediaReferer(withBackups(url, audioUrl, bk), pageUrl, bk.referer);
   const base = sanitize(pageTitle || 'Gleaner');
   await startJob(
@@ -946,7 +949,7 @@ async function downloadMixed(
     mediaItemFor(m.url, media.length > 1 ? `${base}_${String(i + 1).padStart(2, '0')}` : base, m.audioUrl, m),
   );
   if (!items.length && !mediaItems.length) {
-    throw new Error(manifests ? 'm3u8/mpd 清单暂不支持下载（需要下载全部分片再拼接）' : '没有可下载的项');
+    throw new Error(manifests ? t('m3u8/mpd 清单暂不支持下载（需要下载全部分片再拼接）') : t('没有可下载的项'));
   }
   await startJob(
     [...items, ...mediaItems],
@@ -1054,7 +1057,7 @@ const agentDeps: AgentDeps = {
 /** 抓取期间该项已不再 active（取消/暂停/判僵死）：调用方保持原状态，不要改写成「失败」 */
 class PageChannelAborted extends Error {
   constructor() {
-    super('已取消');
+    super(t('已取消'));
   }
 }
 
@@ -1068,7 +1071,7 @@ async function downloadViaPage(
   let made: BlobResponse | undefined;
   if (item.muxAudioUrl) {
     // 画面轨 + 声音轨 → offscreen 里 ffmpeg 合并成一个带声音的 MP4
-    report(progressOf((await loadJob())!, '正在抓取并合并音视频'));
+    report(progressOf((await loadJob())!, t('正在抓取并合并音视频')));
     made = (await browser.runtime.sendMessage({
       type: 'OFFSCREEN_MUX',
       videoUrl: item.url,
@@ -1090,8 +1093,8 @@ async function downloadViaPage(
     } satisfies Message)) as BlobResponse | undefined;
   }
   if (made && !made.ok && made.aborted) throw new PageChannelAborted();
-  if (!made?.ok) throw new Error(made?.error ?? 'offscreen 无响应');
-  if (!made.size) throw new Error('抓到 0 字节');
+  if (!made?.ok) throw new Error(made?.error ?? t('offscreen 无响应'));
+  if (!made.size) throw new Error(t('抓到 0 字节'));
 
   const blobUrl = made.blobUrl;
   const revoke = () =>
@@ -1275,14 +1278,14 @@ function upsertRefererRules(
 // ------------------------------- ZIP（一次性任务） --------------------------
 
 async function handleZip(items: MediaItem[], name: string) {
-  report({ total: items.length, done: 0, failed: 0, running: true, message: '正在抓取并打包' });
+  report({ total: items.length, done: 0, failed: 0, running: true, message: t('正在抓取并打包') });
   await ensureRefererRules(items);
 
   const useOffscreen = Boolean(offscreenApi());
   const result = useOffscreen
     ? await zipViaOffscreen(items)
     : await buildZipBlobUrl(items, 6, (done, failed) =>
-        report({ total: items.length, done, failed, running: true, message: '正在抓取并打包' }),
+        report({ total: items.length, done, failed, running: true, message: t('正在抓取并打包') }),
       );
 
   // 必须先注册监听再发起下载：完成事件若落在 download() resolve
@@ -1312,7 +1315,7 @@ async function handleZip(items: MediaItem[], name: string) {
     done: result.done,
     failed: result.failed,
     running: false,
-    message: result.failed ? `ZIP 已保存，${result.failed} 张抓取失败未入包` : 'ZIP 已保存',
+    message: result.failed ? t('ZIP 已保存，{0} 张抓取失败未入包', result.failed) : t('ZIP 已保存'),
   });
 }
 
@@ -1335,7 +1338,7 @@ async function zipViaOffscreen(items: MediaItem[]): Promise<{ blobUrl: string; d
   } satisfies Message)) as ZipResponse | undefined;
 
   if (!res || !('blobUrl' in res)) {
-    throw new Error(res && 'error' in res ? res.error : 'offscreen 打包失败');
+    throw new Error(res && 'error' in res ? res.error : t('offscreen 打包失败'));
   }
   return res;
 }
@@ -1366,6 +1369,8 @@ function trackDownloadCompletion() {
 // ------------------------------- 消息入口 ----------------------------------
 
 export default defineBackground(() => {
+  // 语言是异步读取的：Service Worker 被消息唤醒的最初几毫秒可能还是默认语言（英文）
+  initLang();
   registerDownloadListener();
   registerMediaSniffer();
 
@@ -1376,7 +1381,7 @@ export default defineBackground(() => {
       // 之前 ZIP 全程没有进度，弹窗一直停在「正在抓取并打包 0/N」
       report({
         total: msg.total, done: msg.done, failed: msg.failed, running: true,
-        message: `正在抓取并打包 ${msg.done + msg.failed}/${msg.total}`,
+        message: t('正在抓取并打包 {0}/{1}', msg.done + msg.failed, msg.total),
       });
       return;
     }
@@ -1394,11 +1399,11 @@ export default defineBackground(() => {
           item.percent = undefined;
           item.phase = 'mux';
           await saveJob();
-          report(progressOf(job, '正在合并画面和声音…'));
+          report(progressOf(job, t('正在合并画面和声音…')));
           return;
         }
         item.percent = msg.total ? Math.round((msg.received / msg.total) * 100) : undefined;
-        report(progressOf(job, `抓取中 ${(msg.received / 1048576).toFixed(1)}MB`));
+        report(progressOf(job, t('抓取中 {0}MB', (msg.received / 1048576).toFixed(1))));
       })();
       return;
     }
@@ -1424,7 +1429,7 @@ export default defineBackground(() => {
               // 之前失败时没有收尾广播：弹窗进度条永远停在「正在抓取并打包 3/3」且算作进行中
               report({
                 total: msg.items.length, done: 0, failed: msg.items.length, running: false,
-                message: `ZIP 打包失败：${String(e?.message ?? e)}`,
+                message: t('ZIP 打包失败：{0}', String(e?.message ?? e)),
               });
               throw e;
             }
@@ -1464,7 +1469,7 @@ export default defineBackground(() => {
               await browser.downloads.showDefaultFolder();
               return {
                 ok: true,
-                note: d ? '文件已被移动或删除，已打开默认下载目录' : 'Chrome 下载列表里的这条记录已被清除，已打开默认下载目录',
+                note: d ? t('文件已被移动或删除，已打开默认下载目录') : t('Chrome 下载列表里的这条记录已被清除，已打开默认下载目录'),
               };
             }
             await browser.downloads.showDefaultFolder();

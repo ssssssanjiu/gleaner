@@ -459,6 +459,9 @@ try {
     10000, 'service worker',
   );
   check('扩展在真 Chrome 中加载', Boolean(extId), extId);
+  // 界面语言默认跟随浏览器；用例按中文按钮文字点击，所以固定成 zh-CN，不受测试机语言影响
+  const swTarget = browser.targets().find((t) => t.type() === 'service_worker' && t.url().includes(extId));
+  await (await swTarget.worker()).evaluate(() => chrome.storage.local.set({ 'og-lang': 'zh-CN' }));
 
   const openPopup = async () => {
     const p = await browser.newPage();

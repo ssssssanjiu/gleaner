@@ -21,7 +21,7 @@ Zero telemetry. Apart from the optional cloud assistant and voice input, everyth
 
 > The name comes from Millet's painting *The Gleaners* — picking up, one by one, the originals scattered across a web page.
 >
-> **Interface language:** the extension UI is currently Simplified Chinese only.
+> **Interface language:** English by default, Simplified Chinese optional (Settings → Language; "Auto" follows your browser language). Adding a language is one file — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

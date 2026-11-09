@@ -1,3 +1,4 @@
+import { t } from './i18n';
 /**
  * 用 ffmpeg.wasm 把 DASH 的画面轨和声音轨合成一个带声音的 MP4。
  * 只在 offscreen document 里跑（有 DOM、能编译 WebAssembly）。
@@ -30,7 +31,7 @@ function loadScript(src: string): Promise<void> {
     const s = document.createElement('script');
     s.src = src;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error('ffmpeg-core.js 加载失败'));
+    s.onerror = () => reject(new Error(t('ffmpeg-core.js 加载失败')));
     document.head.appendChild(s);
   });
 }
@@ -41,7 +42,7 @@ async function getCore(): Promise<FFCore> {
     // WXT 的 getURL 类型只认已知入口，public 里的资源用 as any 绕过
     const base = browser.runtime.getURL('/ffmpeg/' as never);
     await loadScript(base + 'ffmpeg-core.js');
-    if (!window.createFFmpegCore) throw new Error('createFFmpegCore 未就绪');
+    if (!window.createFFmpegCore) throw new Error(t('createFFmpegCore 未就绪'));
     const wasmBinary = new Uint8Array(await (await fetch(base + 'ffmpeg-core.wasm')).arrayBuffer());
     return window.createFFmpegCore({
       wasmBinary,
@@ -77,9 +78,9 @@ export async function muxVideoAudio(
     core.exec(
       '-i', vName, '-i', aName, '-c', 'copy', '-strict', 'experimental', '-movflags', '+faststart', outName,
     );
-    if (core.ret !== 0) throw new Error(`ffmpeg 退出码 ${core.ret}`);
+    if (core.ret !== 0) throw new Error(t('ffmpeg 退出码 {0}', core.ret));
     const out = core.FS.readFile(outName);
-    if (!out.byteLength) throw new Error('合并输出为空');
+    if (!out.byteLength) throw new Error(t('合并输出为空'));
     return out;
   } finally {
     for (const f of [vName, aName, outName]) {
